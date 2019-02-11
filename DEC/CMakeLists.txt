@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 2.8.8)
+
+set(SOURCE
+   ${SOURCE}
+   ${CMAKE_CURRENT_SOURCE_DIR}/decmesh3d.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/dec.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/edge3d.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/face3d.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/vertex3d.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/voxel3d.cpp
+   PARENT_SCOPE
+)
+
+set(HEADERS
+   ${HEADERS}
+   ${CMAKE_CURRENT_SOURCE_DIR}/gridenums.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/decmesh3d.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/dec.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/edge3d.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/face3d.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/vertex3d.h
+   ${CMAKE_CURRENT_SOURCE_DIR}/voxel3d.h
+   PARENT_SCOPE
+)
