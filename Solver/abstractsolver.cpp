@@ -38,6 +38,7 @@ void AbstractSolver::setMesh(Model* mesh)
     gridVerts = new VertexBuffer();
     gridIndices = new IndexBuffer();
     velocityVerts = new VertexBuffer();
+    particleVerts = new VertexBuffer();
     std::vector<unsigned int> indices(decMesh.getNumEdges());
     unsigned int e=0;
     for(EdgeIterator it=decMesh.getEdgeIteratorBegin();it!=decMesh.getEdgeIteratorEnd();++it)
@@ -235,6 +236,23 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
     program->bind();
     program->uploadMat4("pvm",pvm);
     glDrawArrays(GL_LINES,0,decMesh.getNumVoxels()*2);
+}
+
+void AbstractSolver::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
+{
+    particleVerts->bind();
+    std::vector<Vertex> particleV(getNumParticles());
+    for(unsigned int i=0;i<getNumParticles();i++)
+    {
+        particleV[i].pos = glm::vec3(particles[i]);
+    }
+    particleVerts->upload(particleV);
+    particleVerts->bind();
+    Vertex::setVertexAttribs();
+    Vertex::enableVertexAttribs();
+    program->bind();
+    program->uploadMat4("pvm",pvm);
+    glDrawArrays(GL_POINTS,0,getNumParticles());
 }
 
 void AbstractSolver::buildEigenFunctions()

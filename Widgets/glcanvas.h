@@ -49,6 +49,7 @@ private:
     AbstractSolver* solver;
     bool meshVisible;
     bool voxelVisible;
+    bool velocityVisible;
     Camera camera;
     Model* mesh;
     unsigned int vao;

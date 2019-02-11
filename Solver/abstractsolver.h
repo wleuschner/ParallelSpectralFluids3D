@@ -38,8 +38,10 @@ public:
     void clearParticles();
     void addParticle(glm::dvec3 particle);
     unsigned int getNumParticles();
+
     void drawGrid(ShaderProgram* program,const glm::mat4& pvm);
     void drawVelocity(ShaderProgram* program,const glm::mat4& pvm);
+    void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
 
 protected:
     virtual void buildLaplace()=0;
@@ -51,6 +53,7 @@ protected:
     IndexBuffer* gridIndices;
 
     VertexBuffer* velocityVerts;
+    VertexBuffer* particleVerts;
 
     double minRotation;
     double maxRotation;

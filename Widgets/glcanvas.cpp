@@ -1,6 +1,7 @@
 #include "glcanvas.h"
 #include <iostream>
 #include <QtOpenGL/QGLFramebufferObject>
+#include <cstdlib>
 
 #include <GL/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -9,6 +10,7 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
 {
     meshVisible = true;
     voxelVisible = true;
+    velocityVisible = false;
     psfSolver = NULL;
     solver = NULL;
     mesh = NULL;
@@ -78,6 +80,10 @@ void GLCanvas::parameterChanged()
 
 void GLCanvas::simulate()
 {
+    if(solver->getNumParticles()<1000000)
+    {
+        solver->addParticle(glm::dvec3((rand()%1024)/1024.0-0.5,-0.9,(rand()%1024)/1024.0-0.5));
+    }
     solver->integrate();
 }
 
@@ -165,7 +171,10 @@ void GLCanvas::paintGL()
             psfSolver->drawGrid(lineProgram,pvm);
         }
 
-        psfSolver->drawVelocity(lineProgram,pvm);
+        if(velocityVisible)
+        {
+            psfSolver->drawVelocity(lineProgram,pvm);
+        }
 
         if(meshVisible)
         {
@@ -189,6 +198,8 @@ void GLCanvas::paintGL()
             glDisable(GL_BLEND);
             glEnable(GL_CULL_FACE);
         }
+
+        psfSolver->drawParticles(lineProgram,pvm);
     }
     if(record)
     {

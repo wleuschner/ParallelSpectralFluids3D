@@ -26,7 +26,7 @@ public:
     };
 
     DECMesh3D();
-    DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize);
+    DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize,glm::vec3 min);
 
     void addPoint(const Vertex3D& v);
     void addEdge(const Edge3D& e);
@@ -42,6 +42,8 @@ public:
     EdgeIterator& getEdgeIteratorEnd();
     FaceIterator& getFaceIteratorEnd();
     VoxelIterator& getVoxelIteratorEnd();
+
+    glm::uvec3 getDimensions();
 
     unsigned int getPointIndex(const Vertex3D& v);
     unsigned int getEdgeIndex(const Edge3D& e);
@@ -68,6 +70,8 @@ public:
 private:
     float voxelSize;
     float resolution;
+
+    glm::vec3 min;
     glm::ivec3 dims;
 
     PointIterator pointsBegin;

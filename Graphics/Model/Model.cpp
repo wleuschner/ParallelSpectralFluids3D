@@ -213,7 +213,7 @@ DECMesh3D Model::voxelize(float resolution)
     glm::mat4 pv = orthProj*glm::translate(glm::mat4(1.0f),glm::vec3(-getAABB().getCenter().x,-getAABB().getCenter().y,-getAABB().getCenter().z));
 
 
-    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width,height,depth),resolution);
+    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width,height,depth),resolution,aabb.min);
     FrameBufferObject fbo;
     TextureArray texArray;
     texArray.bind(0);
