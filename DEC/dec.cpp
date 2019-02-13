@@ -8,28 +8,39 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
 
     if(dual)
     {
+        h.resize(mesh.getNumEdges(),mesh.getNumEdges());
+        h.setIdentity();
+        return h;
+
         b0 = derivative0(mesh);
         b1 = derivative1(mesh);
         b2 = derivative2(mesh);
-        h.resize(mesh.getNumEdges(),mesh.getNumEdges());
-        for(EdgeIterator eit=mesh.getEdgeIteratorBegin();eit!=mesh.getEdgeIteratorEnd();eit++)
+
+        for(EdgeIterator eit=mesh.getEdgeIteratorBegin();eit<mesh.getEdgeIteratorEnd();eit++)
         {
             if(eit->inside==GridState::INSIDE)
             {
                 unsigned int nVoxels=0;
                 for(Eigen::SparseMatrix<double>::InnerIterator it(b1,eit->id);it;++it)
                 {
-                    nVoxels++;
+                    for(Eigen::SparseMatrix<double>::InnerIterator it2(b2,it.row());it2;++it2)
+                    {
+                        nVoxels++;
+                    }
                 }
                 if(nVoxels==2)
                 {
                     h.insert(eit->id,eit->id)=1.0/1.0;
                 }
-                else if(nVoxels==3)
+                else if(nVoxels==4)
                 {
                     h.insert(eit->id,eit->id)=1.0/1.0;
                 }
-                else if(nVoxels==4)
+                else if(nVoxels==6)
+                {
+                    h.insert(eit->id,eit->id)=1.0/1.0;
+                }
+                else if(nVoxels==8)
                 {
                     h.insert(eit->id,eit->id)=1.0/1.0;
                 }
@@ -38,11 +49,15 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
     }
     else
     {
+        h.resize(mesh.getNumFaces(),mesh.getNumFaces());
+        h.setIdentity();
+        return h;
+
         b0 = derivative0(mesh);
         b1 = derivative1(mesh);
         b2 = derivative2(mesh);
-        h.resize(mesh.getNumFaces(),mesh.getNumFaces());
-        for(FaceIterator fit=mesh.getFaceIteratorBegin();fit!=mesh.getFaceIteratorEnd();fit++)
+
+        for(FaceIterator fit=mesh.getFaceIteratorBegin();fit<mesh.getFaceIteratorEnd();fit++)
         {
             if(fit->inside==GridState::INSIDE)
             {
@@ -134,13 +149,14 @@ Eigen::SparseMatrix<double> derivative2(DECMesh3D& mesh,bool dual)
     }
     Eigen::SparseMatrix<double> d;
     d.resize(mesh.getNumFaces(),mesh.getNumVoxels());
+    d.reserve(Eigen::VectorXi::Constant(mesh.getNumVoxels(),6));
     for(VoxelIterator it = mesh.getVoxelIteratorBegin();it!=mesh.getVoxelIteratorEnd();it++)
     {
         if(it->inside==GridState::INSIDE)
         {
             d.insert(it->f1,it->id) = mesh.getFaceSignum(it->f1,it->v1,it->v2,it->v6,it->v5);
-            d.insert(it->f2,it->id) = mesh.getFaceSignum(it->f2,it->v3,it->v4,it->v8,it->v7);
-            d.insert(it->f3,it->id) = mesh.getFaceSignum(it->f3,it->v7,it->v8,it->v5,it->v6);
+            d.insert(it->f2,it->id) = mesh.getFaceSignum(it->f2,it->v8,it->v7,it->v3,it->v4);
+            d.insert(it->f3,it->id) = mesh.getFaceSignum(it->f3,it->v5,it->v6,it->v7,it->v8);
             d.insert(it->f4,it->id) = mesh.getFaceSignum(it->f4,it->v4,it->v3,it->v2,it->v1);
             d.insert(it->f5,it->id) = mesh.getFaceSignum(it->f5,it->v4,it->v1,it->v5,it->v8);
             d.insert(it->f6,it->id) = mesh.getFaceSignum(it->f6,it->v2,it->v3,it->v7,it->v6);
@@ -189,6 +205,7 @@ Eigen::SparseMatrix<double> derivative0(DECMesh3D& mesh,bool dual)
     }
     Eigen::SparseMatrix<double> d;
     d.resize(mesh.getNumPoints(),mesh.getNumEdges());
+    d.reserve(Eigen::VectorXi::Constant(mesh.getNumEdges(),2));
     for(EdgeIterator it = mesh.getEdgeIteratorBegin();it!=mesh.getEdgeIteratorEnd();it++)
     {
         if(it->inside==GridState::INSIDE)

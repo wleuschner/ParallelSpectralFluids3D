@@ -4,6 +4,7 @@
 
 AbstractSolver::AbstractSolver()
 {
+    maxParticles=200000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
@@ -12,10 +13,12 @@ AbstractSolver::AbstractSolver()
     nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
+    clearParticles();
 }
 
 void AbstractSolver::setMesh(Model* mesh)
 {
+    clearParticles();
     if(this->mesh!=NULL)
     {
         delete this->mesh;
@@ -73,6 +76,7 @@ void AbstractSolver::setInitialVorticityField(const Eigen::VectorXd& field)
 
 void AbstractSolver::setNumberEigenFunctions(unsigned int n)
 {
+    clearParticles();
     this->nEigenFunctions = n;
     buildLaplace();
     buildEigenFunctions();
@@ -81,6 +85,7 @@ void AbstractSolver::setNumberEigenFunctions(unsigned int n)
 
 void AbstractSolver::setResolution(double res)
 {
+    clearParticles();
     this->resolution = res;
     decMesh = mesh->voxelize(res);
     buildLaplace();
@@ -158,21 +163,28 @@ double AbstractSolver::getMinVorticity()
     return minRotation;
 }
 
-const std::vector<glm::dvec3>& AbstractSolver::getParticles()
+const std::vector<Particle>& AbstractSolver::getParticles()
 {
     return particles;
 }
 
 void AbstractSolver::clearParticles()
 {
+    simTime = 0.0;
+    particlePointer = 0;
     particles.clear();
+    particles.resize(maxParticles);
 }
 
-void AbstractSolver::addParticle(glm::dvec3 particle)
+void AbstractSolver::addParticle(Particle particle)
 {
-    if(decMesh.isPointInside(particle))
+    if(decMesh.isPointInside(particle.position)&&
+       simTime>=particles[particlePointer].lifeTime)
     {
-        particles.push_back(particle);
+        particles[particlePointer].position = particle.position;
+        particles[particlePointer].lifeTime = simTime+particle.lifeTime;
+        std::cout<<"Particle Added"<<std::endl;
+        particlePointer = (particlePointer+1)%maxParticles;
     }
 }
 
@@ -189,6 +201,7 @@ void AbstractSolver::drawGrid(ShaderProgram* program,const glm::mat4& pvm)
     Vertex::enableVertexAttribs();
     program->bind();
     program->uploadMat4("pvm",pvm);
+    program->uploadVec4("color",glm::vec4(0.0,0.0,0.0,1.0));
     glDrawElements(GL_LINES,decMesh.getNumEdges()*2,GL_UNSIGNED_INT,(void*)0);
 }
 
@@ -235,6 +248,7 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
     Vertex::enableVertexAttribs();
     program->bind();
     program->uploadMat4("pvm",pvm);
+    program->uploadVec4("color",glm::vec4(1.0,0.0,0.0,1.0));
     glDrawArrays(GL_LINES,0,decMesh.getNumVoxels()*2);
 }
 
@@ -242,9 +256,14 @@ void AbstractSolver::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
 {
     particleVerts->bind();
     std::vector<Vertex> particleV(getNumParticles());
+    unsigned int parts=0;
     for(unsigned int i=0;i<getNumParticles();i++)
     {
-        particleV[i].pos = glm::vec3(particles[i]);
+        if(simTime<particles[i].lifeTime)
+        {
+            particleV[parts].pos = glm::vec3(particles[i].position);
+            parts++;
+        }
     }
     particleVerts->upload(particleV);
     particleVerts->bind();
@@ -252,7 +271,8 @@ void AbstractSolver::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
     Vertex::enableVertexAttribs();
     program->bind();
     program->uploadMat4("pvm",pvm);
-    glDrawArrays(GL_POINTS,0,getNumParticles());
+    program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
+    glDrawArrays(GL_POINTS,0,parts);
 }
 
 void AbstractSolver::buildEigenFunctions()

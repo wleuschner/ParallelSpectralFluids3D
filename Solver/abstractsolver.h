@@ -2,6 +2,7 @@
 #define __ABSTRACT_SOLVER_H_
 #include <Eigen/Eigen>
 #include "../Graphics/Model/Model.h"
+#include "../Graphics/Particle/Particle.h"
 #include "../DEC/decmesh3d.h"
 
 class AbstractSolver
@@ -34,9 +35,9 @@ public:
     double getMaxVorticity();
     double getMinVorticity();
 
-    const std::vector<glm::dvec3>& getParticles();
+    const std::vector<Particle>& getParticles();
     void clearParticles();
-    void addParticle(glm::dvec3 particle);
+    void addParticle(Particle particle);
     unsigned int getNumParticles();
 
     void drawGrid(ShaderProgram* program,const glm::mat4& pvm);
@@ -44,6 +45,10 @@ public:
     void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
 
 protected:
+    unsigned int maxParticles;
+    unsigned int particlePointer;
+    double simTime;
+
     virtual void buildLaplace()=0;
     virtual void buildAdvection()=0;
 
@@ -80,7 +85,7 @@ protected:
     Eigen::MatrixXd velBasisField;
     Eigen::MatrixXd vortBasisField;
 
-    std::vector<glm::dvec3> particles;
+    std::vector<Particle> particles;
 };
 
 #endif

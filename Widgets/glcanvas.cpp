@@ -11,9 +11,11 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
     meshVisible = true;
     voxelVisible = true;
     velocityVisible = false;
+    particleVisible = true;
     psfSolver = NULL;
     solver = NULL;
     mesh = NULL;
+    lifeTime = 30*60.0;
     imageNo = 0;
     record = false;
     QGLFormat format = QGLFormat::defaultFormat();
@@ -41,13 +43,19 @@ void GLCanvas::setMesh(Model* mesh)
 void GLCanvas::showMesh(bool state)
 {
     meshVisible = state;
-    update();
+    updateGL();
 }
 
 void GLCanvas::showVoxel(bool state)
 {
     voxelVisible = state;
-    update();
+    updateGL();
+}
+
+void GLCanvas::showVelocity(bool state)
+{
+    velocityVisible = state;
+    updateGL();
 }
 
 void GLCanvas::changeNumEigenfunctions(int n)
@@ -72,6 +80,10 @@ void GLCanvas::changeTimestep(double val)
     solver->setTimestep(val);
 }
 
+void GLCanvas::changeLifeTime(double val)
+{
+    lifeTime = val;
+}
 
 void GLCanvas::parameterChanged()
 {
@@ -80,9 +92,16 @@ void GLCanvas::parameterChanged()
 
 void GLCanvas::simulate()
 {
-    if(solver->getNumParticles()<1000000)
+    for(unsigned int i=0;i<2000;i++)
     {
-        solver->addParticle(glm::dvec3((rand()%1024)/1024.0-0.5,-0.9,(rand()%1024)/1024.0-0.5));
+        glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
+        //pos.y= mesh->getAABB().min.y+0.1f;
+        //pos.y+=((rand()%1024)/1024.0-0.5);
+        pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
+        pos.x+=((rand()%1024)/1024.0-0.5)*0.75;
+        pos.z+=((rand()%1024)/1024.0-0.5)*0.75;
+        //pos = glm::dvec3(0.0);
+        solver->addParticle(Particle(lifeTime,pos));
     }
     solver->integrate();
 }
@@ -148,6 +167,8 @@ void GLCanvas::initializeGL()
     Vertex::setVertexAttribs();
     Vertex::enableVertexAttribs();
 
+    glPointSize(1.0f);
+
     psfSolver = new PSFSolver();
     solver = psfSolver;
 
@@ -156,7 +177,7 @@ void GLCanvas::initializeGL()
 void GLCanvas::paintGL()
 {
     glViewport(0,0,width(),height());
-    glClearColor(1.0,1.0,1.0,1.0);
+    glClearColor(0.0,0.0,0.0,0.0);
     //glClearColor(0.0,0.0,0.0,1.0);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     if(mesh!=NULL)
@@ -176,11 +197,27 @@ void GLCanvas::paintGL()
             psfSolver->drawVelocity(lineProgram,pvm);
         }
 
+        if(particleVisible)
+        {
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_ONE,GL_ONE);
+
+            Vertex::setVertexAttribs();
+            Vertex::enableVertexAttribs();
+            psfSolver->drawParticles(lineProgram,pvm);
+            glDisable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_CULL_FACE);
+        }
+
         if(meshVisible)
         {
             glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
-            glBlendFunc(GL_ZERO,GL_SRC_COLOR);
+            glBlendFunc(GL_ONE,GL_ONE);
 
 
             mesh->bind();
@@ -195,11 +232,14 @@ void GLCanvas::paintGL()
             //phongProgram->uploadVec3("cPos",camera.getPosition());
             phongProgram->uploadLight("light0",light,view);
             glDrawElements(GL_TRIANGLES,mesh->getIndices().size(),GL_UNSIGNED_INT,(void*)0);
+            Vertex::setVertexAttribs();
+            Vertex::enableVertexAttribs();
+            psfSolver->drawParticles(lineProgram,pvm);
             glDisable(GL_BLEND);
+            glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
         }
 
-        psfSolver->drawParticles(lineProgram,pvm);
     }
     if(record)
     {

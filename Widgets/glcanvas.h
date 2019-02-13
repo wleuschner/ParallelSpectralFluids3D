@@ -32,10 +32,12 @@ signals:
 public slots:
     void showMesh(bool state);
     void showVoxel(bool state);
+    void showVelocity(bool state);
     void changeNumEigenfunctions(int n);
     void changeResolution(double resolution);
     void changeViscosity(double visc);
     void changeTimestep(double val);
+    void changeLifeTime(double val);
     void parameterChanged();
     void simulate();
 private:
@@ -43,6 +45,7 @@ private:
 
     bool record;
     unsigned int imageNo;
+    double lifeTime;
 
     PSFSolver* psfSolver;
     PSFSolverGPU* psfSolverGPU;
@@ -50,6 +53,7 @@ private:
     bool meshVisible;
     bool voxelVisible;
     bool velocityVisible;
+    bool particleVisible;
     Camera camera;
     Model* mesh;
     unsigned int vao;

@@ -34,5 +34,5 @@ void main()
         spec = vec4(0.5,0.5,0.5,1.0) * pow(intSpec,1.2);
     }
     //frag_colour = vec4(1.0,0.0,0.0,1.0);
-    frag_colour = vec4(max(intensity*diff/*+spec*/,diff).xyz,0.5);
+    frag_colour = vec4(/*max(intensity*diff/*+spec*//*,diff).xyz*/diff.xyz,0.5);
 }

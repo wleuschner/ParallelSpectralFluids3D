@@ -16,6 +16,25 @@ DECMesh3D::DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize,glm::vec3 
     this->resolution = resolution;
     this->dims = dims;
     this->voxelSize = voxelSize;
+    for(unsigned int z=0;z<dims.z;z++)
+    {
+        for(unsigned int y=0;y<dims.y;y++)
+        {
+            for(unsigned int x=0;x<dims.x;x++)
+            {
+                unsigned int v1 = (((dims.x+1)*(dims.y+1))*z)+((dims.x+1)*(y+1))+x;
+                unsigned int v2 = (((dims.x+1)*(dims.y+1))*z)+((dims.x+1)*(y+1))+(x+1);
+                unsigned int v3 = (((dims.x+1)*(dims.y+1))*((z+1)))+((dims.x+1)*(y+1))+(x+1);
+                unsigned int v4 = (((dims.x+1)*(dims.y+1))*((z+1)))+((dims.x+1)*(y+1))+x;
+
+                unsigned int v5 = (((dims.x+1)*(dims.y+1))*z)+((dims.x+1)*y)+x;
+                unsigned int v6 = (((dims.x+1)*(dims.y+1))*z)+((dims.x+1)*y)+(x+1);
+                unsigned int v7 = (((dims.x+1)*(dims.y+1))*((z+1)))+((dims.x+1)*y)+(x+1);
+                unsigned int v8 = (((dims.x+1)*(dims.y+1))*((z+1)))+((dims.x+1)*y)+x;
+                addVoxel(Voxel3D(z*(dims.x*dims.y)+y*dims.x+x,v1,v2,v3,v4,v5,v6,v7,v8,GridState::OUTSIDE));
+            }
+        }
+    }
 }
 
 void DECMesh3D::addPoint(const Vertex3D& v)
@@ -79,10 +98,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             unsigned int zOfs = f.id/(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
             unsigned int yOfs = (f.id%(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1)))/(dims.x);
             unsigned int xOfs = (f.id%(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1)))%(dims.x);
-            faces[f.id].e1 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs+1)*(2*dims.x+1)+xOfs;
-            faces[f.id].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs+1)+dims.x;
-            faces[f.id].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs;
-            faces[f.id].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x;
+            faces[f.id].e1 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs;
+            faces[f.id].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs+1)+dims.x;
+            faces[f.id].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs+1)*(2*dims.x+1)+xOfs;
+            faces[f.id].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs)+dims.x;
             addEdge(Edge3D(faces[f.id].e1,f.v1,f.v2,f.inside));
             addEdge(Edge3D(faces[f.id].e2,f.v2,f.v3,f.inside));
             addEdge(Edge3D(faces[f.id].e3,f.v3,f.v4,f.inside));
@@ -110,10 +129,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             unsigned int zOfs = f.id/(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
             unsigned int yOfs = (f.id%(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1))-dims.x*dims.y)/(2*dims.x+1);
             unsigned int xOfs = ((f.id%(dims.x*dims.y+2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1))-dims.x*dims.y)%(2*dims.x+1));
-            faces[f.id].e1 = (zOfs+1)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs;
-            faces[f.id].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+xOfs+(2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
-            faces[f.id].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs;
-            faces[f.id].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs+1)+(2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
+            faces[f.id].e1 = (zOfs)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs;
+            faces[f.id].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs+1)+(2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
+            faces[f.id].e3 = (zOfs+1)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs;
+            faces[f.id].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs)+(2*(dims.x+1)*(dims.y+1)-(dims.x+1)-(dims.y+1));
             addEdge(Edge3D(faces[f.id].e1,f.v1,f.v2,f.inside));
             addEdge(Edge3D(faces[f.id].e2,f.v2,f.v3,f.inside));
             addEdge(Edge3D(faces[f.id].e3,f.v3,f.v4,f.inside));
@@ -183,8 +202,8 @@ void DECMesh3D::addVoxel(const Voxel3D& v)
 
         std::cout<<voxels[v.id].f1<<" "<<voxels[v.id].f2<<" "<<voxels[v.id].f3<<" "<<voxels[v.id].f4<<" "<<voxels[v.id].f5<<" "<<voxels[v.id].f6<<std::endl;
         addFace(Face3D(voxels[v.id].f1,v.v1,v.v2,v.v6,v.v5,v.inside),FaceDirection::FRONT);
-        addFace(Face3D(voxels[v.id].f2,v.v3,v.v4,v.v8,v.v7,v.inside),FaceDirection::BACK);
-        addFace(Face3D(voxels[v.id].f3,v.v7,v.v8,v.v5,v.v6,v.inside),FaceDirection::BOTTOM);
+        addFace(Face3D(voxels[v.id].f2,v.v8,v.v7,v.v3,v.v4,v.inside),FaceDirection::BACK);
+        addFace(Face3D(voxels[v.id].f3,v.v5,v.v6,v.v7,v.v8,v.inside),FaceDirection::BOTTOM);
         addFace(Face3D(voxels[v.id].f4,v.v4,v.v3,v.v2,v.v1,v.inside),FaceDirection::TOP);
         addFace(Face3D(voxels[v.id].f5,v.v4,v.v1,v.v5,v.v8,v.inside),FaceDirection::LEFT);
         addFace(Face3D(voxels[v.id].f6,v.v2,v.v3,v.v7,v.v6,v.inside),FaceDirection::RIGHT);
@@ -194,6 +213,12 @@ void DECMesh3D::addVoxel(const Voxel3D& v)
             v.inside==GridState::INSIDE)
     {
         voxels[v.id].inside = v.inside;
+        addFace(Face3D(voxels[v.id].f1,v.v1,v.v2,v.v6,v.v5,v.inside),FaceDirection::FRONT);
+        addFace(Face3D(voxels[v.id].f2,v.v8,v.v7,v.v3,v.v4,v.inside),FaceDirection::BACK);
+        addFace(Face3D(voxels[v.id].f3,v.v5,v.v6,v.v7,v.v8,v.inside),FaceDirection::BOTTOM);
+        addFace(Face3D(voxels[v.id].f4,v.v4,v.v3,v.v2,v.v1,v.inside),FaceDirection::TOP);
+        addFace(Face3D(voxels[v.id].f5,v.v4,v.v1,v.v5,v.v8,v.inside),FaceDirection::LEFT);
+        addFace(Face3D(voxels[v.id].f6,v.v2,v.v3,v.v7,v.v6,v.inside),FaceDirection::RIGHT);
     }
     else {
         std::cout<<"CONFLICT"<<std::endl;
@@ -275,9 +300,9 @@ unsigned int DECMesh3D::getVoxelIndex(const Voxel3D& v)
 
 bool DECMesh3D::isPointInside(const glm::vec3& point)
 {
-    unsigned int yOfs = static_cast<unsigned int>((-min.y+point.y)/resolution);
-    unsigned int xOfs = static_cast<unsigned int>((-min.x+point.x)/resolution);
-    unsigned int zOfs = static_cast<unsigned int>((-min.x+point.z)/resolution);
+    unsigned int yOfs = static_cast<unsigned int>((-min.y+point.y)/resolution)+1;
+    unsigned int xOfs = static_cast<unsigned int>((-min.x+point.x)/resolution)+1;
+    unsigned int zOfs = static_cast<unsigned int>((-min.x+point.z)/resolution)+1;
 
     return voxels[zOfs*(dims.y*dims.x)+yOfs*dims.x+xOfs].inside==GridState::INSIDE;
 }

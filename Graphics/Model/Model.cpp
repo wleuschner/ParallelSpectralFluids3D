@@ -213,7 +213,7 @@ DECMesh3D Model::voxelize(float resolution)
     glm::mat4 pv = orthProj*glm::translate(glm::mat4(1.0f),glm::vec3(-getAABB().getCenter().x,-getAABB().getCenter().y,-getAABB().getCenter().z));
 
 
-    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width,height,depth),resolution,aabb.min);
+    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width+2,height+2,depth+2),resolution,aabb.min);
     FrameBufferObject fbo;
     TextureArray texArray;
     texArray.bind(0);
@@ -284,16 +284,16 @@ DECMesh3D Model::voxelize(float resolution)
                 {
                     if(buffer[(x*4)+width*4*y+(width*4*height)*l]&1)
                     {
-                        v1 = (((width+1)*(height+1))*(32*4*l+d))+((width+1)*(y+1))+x;
-                        v2 = (((width+1)*(height+1))*(32*4*l+d))+((width+1)*(y+1))+(x+1);
-                        v3 = (((width+1)*(height+1))*((32*4*l+d+1)))+((width+1)*(y+1))+(x+1);
-                        v4 = (((width+1)*(height+1))*((32*4*l+d+1)))+((width+1)*(y+1))+x;
+                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
 
-                        v5 = (((width+1)*(height+1))*(32*4*l+d))+((width+1)*y)+x;
-                        v6 = (((width+1)*(height+1))*(32*4*l+d))+((width+1)*y)+(x+1);
-                        v7 = (((width+1)*(height+1))*((32*4*l+d+1)))+((width+1)*y)+(x+1);
-                        v8 = (((width+1)*(height+1))*((32*4*l+d+1)))+((width+1)*y)+x;
-                        decMesh.addVoxel(Voxel3D((32*4*l+d)*(width*height)+y*(width)+x,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
+                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.addVoxel(Voxel3D((32*4*l+d+1)*((width+2)*(height+2))+(y+1)*(width+2)+x+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+d*resolution;
@@ -324,15 +324,16 @@ DECMesh3D Model::voxelize(float resolution)
 
                     if(buffer[1+(x*4)+width*4*y+(width*4*height)*l]&1)
                     {
-                        v1 = ((width*height+height)*(32*4*l+d+32))+((width+1)*(y+1))+x+(y+1);
-                        v2 = ((width*height+height)*(32*4*l+d+32))+((width+1)*(y+1))+(x+1)+(y+1);
-                        v3 = ((width*height+height)*((32*4*l+d+32)+1))+((width+1)*(y+1))+(x+1)+(y+1);
-                        v4 = ((width*height+height)*((32*4*l+d+32)+1))+((width+1)*(y+1))+x+(y+1);
-                        v5 = ((width*height+height)*(32*4*l+d+32))+((width+1)*y)+x+y;
-                        v6 = ((width*height+height)*(32*4*l+d+32))+((width+1)*y)+(x+1)+y;
-                        v7 = ((width*height+height)*((32*4*l+d+32)+1))+((width+1)*y)+(x+1)+y;
-                        v8 = ((width*height+height)*((32*4*l+d+32)+1))+((width+1)*y)+x+y;
-                        decMesh.addVoxel(Voxel3D((32*4*l+d+32)*(width*height)+y*(width)+(x),v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1+1))+(x+1);
+
+                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1))+(x+1);
+                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.addVoxel(Voxel3D((32*4*l+d+1+32)*((width+2)*(height+2))+(y+1)*(width+2)+x+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+32)*resolution;
@@ -362,15 +363,16 @@ DECMesh3D Model::voxelize(float resolution)
                 {
                     if(buffer[2+(x*4)+width*4*y+(width*4*height)*l]&1)
                     {
-                        v1 = ((width*height+height)*(32*4*l+d+64))+(width*(y+1))+x+(y+1);
-                        v2 = ((width*height+height)*(32*4*l+d+64))+(width*(y+1))+(x+1)+(y+1);
-                        v3 = ((width*height+height)*((32*4*l+d+64)+1))+(width*(y+1))+(x+1)+(y+1);
-                        v4 = ((width*height+height)*((32*4*l+d+64)+1))+(width*(y+1))+x+(y+1);
-                        v5 = ((width*height+height)*(32*4*l+d+64))+(width*y)+x+y;
-                        v6 = ((width*height+height)*(32*4*l+d+64))+(width*y)+(x+1)+y;
-                        v7 = ((width*height+height)*((32*4*l+d+64)+1))+(width*y)+(x+1)+y;
-                        v8 = ((width*height+height)*((32*4*l+d+64)+1))+(width*y)+x+y;
-                        decMesh.addVoxel(Voxel3D((32*4*l+d+64)*(width*height*4)+x*(width*4)+(x*4),v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1+1))+(x+1);
+
+                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1))+(x+1);
+                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.addVoxel(Voxel3D((32*4*l+d+1+64)*((width+2)*(height+2))+(y+1)*(width+2)+x+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+64)*resolution;
@@ -401,15 +403,16 @@ DECMesh3D Model::voxelize(float resolution)
 
                     if(buffer[3+(x*4)+width*4*y+(width*4*height)*l]&1)
                     {
-                        v1 = ((width*height+height)*(32*4*l+d+96))+(width*(y+1))+x+(y+1);
-                        v2 = ((width*height+height)*(32*4*l+d+96))+(width*(y+1))+(x+1)+(y+1);
-                        v3 = ((width*height+height)*((32*4*l+d+96)+1))+(width*(y+1))+(x+1)+(y+1);
-                        v4 = ((width*height+height)*((32*4*l+d+96)+1))+(width*(y+1))+x+(y+1);
-                        v5 = ((width*height+height)*(32*4*l+d+96))+(width*y)+x+y;
-                        v6 = ((width*height+height)*(32*4*l+d+96))+(width*y)+(x+1)+y;
-                        v7 = ((width*height+height)*((32*4*l+d+96)+1))+(width*y)+(x+1)+y;
-                        v8 = ((width*height+height)*((32*4*l+d+96)+1))+(width*y)+x+y;
-                        decMesh.addVoxel(Voxel3D((32*4*l+d+96)*(width*height*4)+x*(width*4)+(x*4),v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1+1))+(x+1);
+
+                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1))+(x+1);
+                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.addVoxel(Voxel3D((32*4*l+d+1+96)*((width+2)*(height+2))+(y+1)*(width+2)+x+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+96)*resolution;
