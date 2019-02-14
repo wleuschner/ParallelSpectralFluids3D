@@ -110,7 +110,7 @@ void GLCanvas::simulate()
         //pos.y+=((rand()%1024)/1024.0-0.5);
         //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
         pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
-        pos.z+=((rand()%1024)/1024.0-0.5)*0.5;
+        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.5;
         //pos = glm::dvec3(0.0);
         solver->addParticle(Particle(lifeTime,pos));
     }

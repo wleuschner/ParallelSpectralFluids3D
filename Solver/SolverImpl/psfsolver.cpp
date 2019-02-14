@@ -158,7 +158,7 @@ void PSFSolver::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            //mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
         }
     }
     mat.pruned();
@@ -226,7 +226,7 @@ void PSFSolver::buildLaplace()
             {
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)))
                 {
-                    gravity(it->id) = -(it->normal.y>0?1:-1)*9.81;
+                    gravity(it->id) = -(it->normal.y>0?1:-1)*0.00981;
                 }
             }
         }
@@ -284,10 +284,11 @@ void PSFSolver::buildLaplace()
                 glm::dvec3 p2=glm::dvec3(vertices[it->v2].pos);
                 glm::dvec3 p3=glm::dvec3(vertices[it->v3].pos);
                 glm::dvec3 p4=glm::dvec3(vertices[it->v4].pos);
+                AABB aabb = mesh->getAABB();
                 unsigned int zId = (it->id%(dims.x*dims.y+2*dims.x*dims.y-dims.x-dims.y));
-                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))/*&&
-                   (p1.y<=-0.7||p2.y<=-0.7||p3.y<=-0.7||p4.y<=-0.7)*/)
-                        velocityField(it->id) = (it->normal.y>0?1:-1)*1.0;
+                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))&&
+                   (p1.y<=aabb.min.y+0.3||p2.y<=aabb.min.y+0.3||p3.y<=aabb.min.y+0.3||p4.y<=aabb.min.y+0.3))
+                        velocityField(it->id) = (it->normal.y>0?1:-1)*0.1;
 
             }
         }

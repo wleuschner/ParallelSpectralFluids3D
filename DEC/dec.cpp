@@ -9,8 +9,8 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
     if(dual)
     {
         h.resize(mesh.getNumEdges(),mesh.getNumEdges());
-        //h.setIdentity();
-        //return h;
+        h.setIdentity();
+        return h;
 
         b0 = derivative0(mesh);
         b1 = derivative1(mesh);
@@ -50,8 +50,8 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
     else
     {
         h.resize(mesh.getNumFaces(),mesh.getNumFaces());
-        //h.setIdentity();
-        //return h;
+        h.setIdentity();
+        return h;
 
         b0 = derivative0(mesh);
         b1 = derivative1(mesh);
@@ -68,11 +68,11 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                 }
                 if(nVoxels==1)
                 {
-                    h.insert(fit->id,fit->id)=0.5/4.0;
+                    h.insert(fit->id,fit->id)=0.5/1.0;
                 }
                 else if(nVoxels==2)
                 {
-                    h.insert(fit->id,fit->id)=1.0/4.0;
+                    h.insert(fit->id,fit->id)=1.0/1.0;
                 }
                 else
                 {
