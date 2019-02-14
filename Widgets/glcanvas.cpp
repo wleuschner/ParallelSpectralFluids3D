@@ -58,6 +58,12 @@ void GLCanvas::showVelocity(bool state)
     updateGL();
 }
 
+void GLCanvas::showParticles(bool state)
+{
+    particleVisible = state;
+    updateGL();
+}
+
 void GLCanvas::changeNumEigenfunctions(int n)
 {
     updateTimer.stop();
@@ -85,6 +91,11 @@ void GLCanvas::changeLifeTime(double val)
     lifeTime = val;
 }
 
+void GLCanvas::changeGravity(bool gravity)
+{
+    solver->setGravityActive(gravity);
+}
+
 void GLCanvas::parameterChanged()
 {
 
@@ -95,11 +106,11 @@ void GLCanvas::simulate()
     for(unsigned int i=0;i<2000;i++)
     {
         glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
-        //pos.y= mesh->getAABB().min.y+0.1f;
+        pos.y= mesh->getAABB().min.y+0.1f;
         //pos.y+=((rand()%1024)/1024.0-0.5);
-        pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
-        pos.x+=((rand()%1024)/1024.0-0.5)*0.75;
-        pos.z+=((rand()%1024)/1024.0-0.5)*0.75;
+        //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
+        pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
+        pos.z+=((rand()%1024)/1024.0-0.5)*0.5;
         //pos = glm::dvec3(0.0);
         solver->addParticle(Particle(lifeTime,pos));
     }

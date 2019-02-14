@@ -20,6 +20,7 @@ public:
     void setResolution(double res);
     void setViscosity(double visc);
     void setTimestep(double timestep);
+    void setGravityActive(bool state);
 
     Model* getMesh();
     DECMesh3D& getDECMesh();
@@ -71,6 +72,8 @@ protected:
     DECMesh3D decMesh;
     Model* mesh;
 
+    bool gravityActive;
+
     Eigen::SparseMatrix<double> curl;
 
     std::vector<Eigen::VectorXd> eigenFunctions;
@@ -80,6 +83,7 @@ protected:
 
     std::vector<Eigen::MatrixXd> advection;
 
+    Eigen::VectorXd gravity;
     Eigen::VectorXd eigenValues;
     Eigen::VectorXd basisCoeff;
     Eigen::MatrixXd velBasisField;

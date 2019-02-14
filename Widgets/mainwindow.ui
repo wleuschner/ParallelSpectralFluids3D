@@ -115,6 +115,13 @@
          </layout>
         </item>
         <item>
+         <widget class="QCheckBox" name="chkGravity">
+          <property name="text">
+           <string>Gravity</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <layout class="QHBoxLayout" name="horizontalLayout_6">
           <item>
            <widget class="QCheckBox" name="chkShowMesh">
@@ -140,6 +147,16 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <widget class="QCheckBox" name="chkParticles">
+            <property name="text">
+             <string>Show Particles</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item>
            <widget class="QCheckBox" name="chkVelocity">
             <property name="text">

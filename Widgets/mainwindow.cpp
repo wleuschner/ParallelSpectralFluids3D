@@ -15,11 +15,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->chkShowVoxel,SIGNAL(toggled(bool)),ui->canvas,SLOT(showVoxel(bool)));
     connect(ui->chkShowMesh,SIGNAL(toggled(bool)),ui->canvas,SLOT(showMesh(bool)));
     connect(ui->chkVelocity,SIGNAL(toggled(bool)),ui->canvas,SLOT(showVelocity(bool)));
+    connect(ui->chkParticles,SIGNAL(toggled(bool)),ui->canvas,SLOT(showParticles(bool)));
     connect(ui->spinNumEigenFunctions,SIGNAL(valueChanged(int)),ui->canvas,SLOT(changeNumEigenfunctions(int)));
     connect(ui->spinVoxelSize,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeResolution(double)));
     connect(ui->spinViscosity,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeViscosity(double)));
     connect(ui->spinTimestep,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeTimestep(double)));
     connect(ui->spinLifeTime,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeLifeTime(double)));
+    connect(ui->chkGravity,SIGNAL(toggled(bool)),ui->canvas,SLOT(changeGravity(bool)));
 
     mesh = NULL;
 }

@@ -242,7 +242,7 @@ DECMesh3D Model::voxelize(float resolution)
 
     glViewport(0,0,width,height);
     glEnable(GL_DEPTH_CLAMP);
-    glDepthRange(getAABB().min.z,getAABB().max.z);
+    glDepthRange(-ext.z/2,ext.z/2);
     glEnable(GL_COLOR_LOGIC_OP);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);

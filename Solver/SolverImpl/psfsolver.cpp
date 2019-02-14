@@ -38,6 +38,11 @@ void PSFSolver::integrate()
     {
         basisCoeff(k) *= std::exp(-viscosity*eigenValues(k)*(timeStep));
     }
+    if(gravityActive)
+    {
+        basisCoeff += timeStep*gravity;
+    }
+
 
     velocityField = velBasisField*basisCoeff;
 
@@ -131,13 +136,17 @@ void PSFSolver::integrate()
             //it->position = (it->position)+timeStep*vel;
             it->position = glm::clamp(it->position+timeStep*vel,glm::dvec3(mesh->getAABB().min),glm::dvec3(mesh->getAABB().max));
         }
+        else
+        {
+            it->lifeTime = 0.0;
+        }
     }
     simTime+=1.0/60.0;
 }
 
 void PSFSolver::buildLaplace()
 {
-    Eigen::SparseMatrix<double> mat = derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
+    Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
     for(int k=0;k<bound.outerSize();k++)
@@ -149,9 +158,10 @@ void PSFSolver::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            //mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
         }
     }
+    mat.pruned();
 
     eigenValues.resize(nEigenFunctions);
     velBasisField.resize(decMesh.getNumFaces(),nEigenFunctions);
@@ -206,14 +216,30 @@ void PSFSolver::buildLaplace()
         }
     }
     vortBasisField = (curl*velBasisField);
-    std::vector<Vertex> vertices = mesh->getVertices();
 
+    gravity = Eigen::VectorXd::Zero(decMesh.getNumFaces());
+    for(FaceIterator it=decMesh.getFaceIteratorBegin();it!=decMesh.getFaceIteratorEnd();it++)
+    {
+        if(it->inside==GridState::INSIDE)
+        {
+            if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
+            {
+                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)))
+                {
+                    gravity(it->id) = -(it->normal.y>0?1:-1)*9.81;
+                }
+            }
+        }
+    }
+    gravity = velBasisField.transpose()*gravity;
+
+    std::vector<Vertex> vertices = mesh->getVertices();
 
     vorticityField = Eigen::VectorXd::Zero(decMesh.getNumEdges());
     //vorticityField.setRandom();
     //glm::uvec3 dims = decMesh.getDimensions();
     //vorticityField(decMesh.getNumEdges()/2) = 2e+64;
-    /*
+/*
     for(EdgeIterator it=decMesh.getEdgeIteratorBegin();it!=decMesh.getEdgeIteratorEnd();it++)
     {
         if(it->inside==GridState::INSIDE)
@@ -261,7 +287,7 @@ void PSFSolver::buildLaplace()
                 unsigned int zId = (it->id%(dims.x*dims.y+2*dims.x*dims.y-dims.x-dims.y));
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))/*&&
                    (p1.y<=-0.7||p2.y<=-0.7||p3.y<=-0.7||p4.y<=-0.7)*/)
-                        velocityField(it->id) = (it->normal.y>0?1:-1)*0.1;
+                        velocityField(it->id) = (it->normal.y>0?1:-1)*1.0;
 
             }
         }

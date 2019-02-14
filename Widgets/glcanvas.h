@@ -33,11 +33,13 @@ public slots:
     void showMesh(bool state);
     void showVoxel(bool state);
     void showVelocity(bool state);
+    void showParticles(bool state);
     void changeNumEigenfunctions(int n);
     void changeResolution(double resolution);
     void changeViscosity(double visc);
     void changeTimestep(double val);
     void changeLifeTime(double val);
+    void changeGravity(bool gravity);
     void parameterChanged();
     void simulate();
 private:

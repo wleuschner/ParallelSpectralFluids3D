@@ -9,6 +9,7 @@ AbstractSolver::AbstractSolver()
     gridIndices = NULL;
     velocityVerts = NULL;
     mesh = NULL;
+    gravityActive = false;
     resolution = 0.2;
     nEigenFunctions = 16;
     viscosity = 0.0f;
@@ -101,6 +102,11 @@ void AbstractSolver::setViscosity(double visc)
 void AbstractSolver::setTimestep(double timestep)
 {
     this->timeStep = timestep;
+}
+
+void AbstractSolver::setGravityActive(bool state)
+{
+    gravityActive = state;
 }
 
 Model* AbstractSolver::getMesh()
@@ -201,7 +207,7 @@ void AbstractSolver::drawGrid(ShaderProgram* program,const glm::mat4& pvm)
     Vertex::enableVertexAttribs();
     program->bind();
     program->uploadMat4("pvm",pvm);
-    program->uploadVec4("color",glm::vec4(0.0,0.0,0.0,1.0));
+    program->uploadVec4("color",glm::vec4(1.0,0.0,0.0,1.0));
     glDrawElements(GL_LINES,decMesh.getNumEdges()*2,GL_UNSIGNED_INT,(void*)0);
 }
 
