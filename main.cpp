@@ -1,8 +1,10 @@
 #include "Widgets/mainwindow.h"
 #include <QApplication>
+#include "microprofile/microprofile.h"
 
 int main(int argc, char *argv[])
 {
+    MicroProfileInit();
     QGLFormat format;
     format = QGLFormat::defaultFormat();
     format.setProfile(QGLFormat::CoreProfile);

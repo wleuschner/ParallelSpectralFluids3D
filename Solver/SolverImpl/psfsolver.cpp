@@ -4,6 +4,7 @@
 #include<iostream>
 #include<set>
 #include<map>
+#include"microprofile/microprofile.h"
 #include"../../Spectra/MatOp/SparseSymShiftSolve.h"
 #include"../../Spectra/SymEigsShiftSolver.h"
 #include"../../Graphics/TextureArray/TextureArray.h"
@@ -16,6 +17,7 @@ PSFSolver::PSFSolver() : AbstractSolver()
 
 void PSFSolver::integrate()
 {
+    MICROPROFILE_SCOPEI("SolverCPU","integrate",0xFF000000);
     double e1 = 0.0;
     double e2 = 0.0;
 
@@ -146,6 +148,7 @@ void PSFSolver::integrate()
 
 void PSFSolver::buildLaplace()
 {
+    MICROPROFILE_SCOPEI("SolverCPU","buildLaplace",0xFF000000);
     Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
@@ -298,6 +301,7 @@ void PSFSolver::buildLaplace()
 
 void PSFSolver::buildAdvection()
 {
+    MICROPROFILE_SCOPEI("SolverCPU","buildAdvection",MP_RED);
     std::vector<Eigen::MatrixXd> wedges;
     wedges.resize(static_cast<unsigned int>(eigenValues.rows()));
     advection.resize(static_cast<unsigned int>(eigenValues.rows()));

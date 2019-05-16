@@ -2,9 +2,11 @@
 #include <iostream>
 #include <QtOpenGL/QGLFramebufferObject>
 #include <cstdlib>
+#include "microprofile/microprofile.h"
 
 #include <GL/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <CL/cl.h>
 
 GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
 {
@@ -103,6 +105,8 @@ void GLCanvas::parameterChanged()
 
 void GLCanvas::simulate()
 {
+    //MicroProfileOnThreadCreate("Simulate");
+    MICROPROFILE_SCOPEI("Canvas","simulate",MP_YELLOW);
     for(unsigned int i=0;i<2000;i++)
     {
         glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
@@ -115,6 +119,7 @@ void GLCanvas::simulate()
         solver->addParticle(Particle(lifeTime,pos));
     }
     solver->integrate();
+    MicroProfileFlip(nullptr);
 }
 
 void GLCanvas::initializeGL()
@@ -181,8 +186,8 @@ void GLCanvas::initializeGL()
     glPointSize(1.0f);
 
     psfSolver = new PSFSolver();
+    psfSolverGPU = new PSFSolverGPU();
     solver = psfSolver;
-
 }
 
 void GLCanvas::paintGL()

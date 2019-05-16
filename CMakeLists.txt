@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.8)
 
 project(PSF3D)
 set (CMAKE_CXX_STANDARD 11)
-add_definitions(-DQT_NO_OPENGL_ES_2 -DGLM_FORCE_SSE2 -DGLM_FORCE_ALIGNED -DGLM_ENABLE_EXPERIMENTAL)
+add_definitions(-DQT_NO_OPENGL_ES_2 -DGLM_FORCE_SSE2 -DGLM_FORCE_ALIGNED -DGLM_ENABLE_EXPERIMENTAL -DVIENNACL_HAVE_EIGEN -DMICROPROFILE_IMPL -DMICROPROFILE_WEBSERVER=1 -DMICROPROFILE_ENABLED=1 -DMICROPROFILE_GPU_TIMERS=0)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -40,8 +40,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package (Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(assimp)
+find_package(OpenCL REQUIRED)
 
 #include_directories(${Qt5Widgets_INCLUDES})
 #add_definitions(${Qt5Widgets_DEFINITIONS})
@@ -52,12 +53,14 @@ set(UI
 
 set(HEADERS
    ${HEADERS}
+   microprofile/microprofile.h
 )
 
 
 set(SOURCE
     ${SOURCE}
     main.cpp
+    microprofile/microprofile.cpp
 )
 
 set(RES_FILES
@@ -72,8 +75,7 @@ add_executable(${PROJECT_NAME} ${RES_FILES} ${UI} ${SOURCE} ${HEADERS} ${QT_HEAD
 
 #qt5_use_modules(${PROJECT_NAME} Widgets OpenGL Core Gui)
 
-
-target_link_libraries(${PROJECT_NAME} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${QT_QTWIDGETS_LIBRARY} ${OPENGL_gl_LIBRARY} ${GLEW_LIBRARIES} ${EIGEN_LIBRARIES} arpack assimp)
+target_link_libraries(${PROJECT_NAME} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${QT_QTWIDGETS_LIBRARY} ${OPENGL_gl_LIBRARY} ${GLEW_LIBRARIES} ${EIGEN_LIBRARIES} ${OpenCL_LIBRARY} arpack assimp pthread)
 
 set (source ${CMAKE_SOURCE_DIR}/Resources)
 set (destination ${CMAKE_CURRENT_BINARY_DIR}/Res)
