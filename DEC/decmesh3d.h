@@ -52,10 +52,10 @@ public:
 
     bool isPointInside(const glm::vec3& point);
 
-    Vertex3D getPoint(unsigned int id);
-    Edge3D getEdge(unsigned int id);
-    Face3D getFace(unsigned int id);
-    Voxel3D getVoxel(unsigned int id);
+    Vertex3D getPoint(int id);
+    Edge3D getEdge(int id);
+    Face3D getFace(int id);
+    Voxel3D getVoxel(int id);
 
     int getPointSignum(unsigned int id,unsigned int v1);
     int getEdgeSignum(unsigned int id,unsigned int v1,unsigned int v2);

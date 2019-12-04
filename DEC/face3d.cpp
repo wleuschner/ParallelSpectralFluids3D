@@ -5,7 +5,7 @@ Face3D::Face3D()
     inside = GridState::UNINITIALIZED;
 }
 
-Face3D::Face3D(unsigned int id,
+Face3D::Face3D(int id,
                unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4,
                GridState inside) : Face3D()
 {

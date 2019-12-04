@@ -43,7 +43,7 @@ void AbstractSolver::setMesh(Model* mesh)
     gridIndices = new IndexBuffer();
     velocityVerts = new VertexBuffer();
     particleVerts = new VertexBuffer();
-    std::vector<unsigned int> indices(decMesh.getNumEdges());
+    std::vector<unsigned int> indices(2*decMesh.getNumEdges());
     unsigned int e=0;
     for(EdgeIterator it=decMesh.getEdgeIteratorBegin();it!=decMesh.getEdgeIteratorEnd();++it)
     {
@@ -238,13 +238,13 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
             double s6 = decMesh.getFaceSignum(it->f6,it->v2,it->v3,it->v7,it->v6);
 
             glm::vec3 center = vertices[it->v5].pos+0.5f*(vertices[it->v3].pos-vertices[it->v5].pos);
-            glm::vec3 velDir = 0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal))+
-                               0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
-                               0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal));
+            glm::vec3 velDir = 0.5f*glm::vec3((s1*velocityField(labs(f1.id)-1)*f1.normal-s2*velocityField(labs(f2.id)-1)*f2.normal))+
+                               0.5f*glm::vec3((s3*velocityField(labs(f3.id)-1)*f3.normal-s4*velocityField(labs(f4.id)-1)*f4.normal))+
+                               0.5f*glm::vec3((s5*velocityField(labs(f5.id)-1)*f5.normal-s6*velocityField(labs(f6.id)-1)*f6.normal));
 
             velVerts[e].pos = center;
             e++;
-            velVerts[e].pos = center+velDir;
+            velVerts[e].pos = center+velDir*5.0f;
             e++;
         }
     }

@@ -7,11 +7,11 @@ class Face3D
 {
 public:
     Face3D();
-    Face3D(unsigned int id,
+    Face3D(int id,
            unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4,
            GridState inside);
 
-    unsigned int id;
+    int id;
     GridState inside;
 
     glm::dvec3 normal;

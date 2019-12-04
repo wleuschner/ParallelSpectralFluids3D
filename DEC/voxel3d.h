@@ -11,37 +11,37 @@ public:
             unsigned int v5,unsigned int v6,unsigned int v7,unsigned int v8,
             GridState inside);
 
-    unsigned int id;
+    int id;
     GridState inside;
 
     union
     {
         struct
         {
-            unsigned int f1;
-            unsigned int f2;
-            unsigned int f3;
-            unsigned int f4;
-            unsigned int f5;
-            unsigned int f6;
+            int f1;
+            int f2;
+            int f3;
+            int f4;
+            int f5;
+            int f6;
         };
-        unsigned int f[6];
+        int f[6];
     };
 
     union
     {
         struct
         {
-            unsigned int v1;
-            unsigned int v2;
-            unsigned int v3;
-            unsigned int v4;
-            unsigned int v5;
-            unsigned int v6;
-            unsigned int v7;
-            unsigned int v8;
+            int v1;
+            int v2;
+            int v3;
+            int v4;
+            int v5;
+            int v6;
+            int v7;
+            int v8;
         };
-        unsigned int v[8];
+        int v[8];
     };
 };
 
