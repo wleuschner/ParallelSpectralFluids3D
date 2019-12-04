@@ -43,6 +43,9 @@ public:
     FaceIterator& getFaceIteratorEnd();
     VoxelIterator& getVoxelIteratorEnd();
 
+    Voxel3D* getVoxels();
+    Face3D* getFaces();
+
     glm::uvec3 getDimensions();
 
     unsigned int getPointIndex(const Vertex3D& v);

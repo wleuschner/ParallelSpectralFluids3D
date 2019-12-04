@@ -20,12 +20,12 @@ public:
     {
         struct
         {
-            unsigned int e1;
-            unsigned int e2;
-            unsigned int e3;
-            unsigned int e4;
+            int e1;
+            int e2;
+            int e3;
+            int e4;
         };
-        unsigned int e[4];
+        int e[4];
     };
 
     union

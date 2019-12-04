@@ -6,11 +6,11 @@ class Edge3D
 {
 public:
     Edge3D();
-    Edge3D(unsigned int id,
+    Edge3D(int id,
            unsigned int v1,unsigned int v2,
            GridState inside);
 
-    unsigned int id;
+    int id;
     GridState inside;
 
     union

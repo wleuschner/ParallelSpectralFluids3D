@@ -7,7 +7,7 @@ Edge3D::Edge3D()
     inside = GridState::UNINITIALIZED;
 }
 
-Edge3D::Edge3D(unsigned int id,
+Edge3D::Edge3D(int id,
                unsigned int v1,unsigned int v2,
                GridState inside) : Edge3D()
 {

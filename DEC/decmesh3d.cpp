@@ -53,22 +53,23 @@ void DECMesh3D::addPoint(const Vertex3D& v)
 
 void DECMesh3D::addEdge(const Edge3D& e)
 {
-    if(edges[e.id].inside==GridState::UNINITIALIZED)
+    unsigned int eid = labs(e.id)-1;
+    if(edges[eid].inside==GridState::UNINITIALIZED)
     {
-        edges[e.id] = e;
+        edges[eid] = e;
         addPoint(Vertex3D(e.v1,e.inside));
         addPoint(Vertex3D(e.v2,e.inside));
     }
-    else if(edges[e.id].inside==GridState::OUTSIDE&&
+    else if(edges[eid].inside==GridState::OUTSIDE&&
             e.inside==GridState::INSIDE)
     {
-        edges[e.id].inside = e.inside;
+        edges[eid].inside = e.inside;
         addPoint(Vertex3D(e.v1,e.inside));
         addPoint(Vertex3D(e.v2,e.inside));
     }
     else
     {
-        std::cout<<"EDGE CONFLICT:"<<e.id<<" "<<edges[e.id].inside<<std::endl;
+        std::cout<<"EDGE CONFLICT:"<<eid<<" "<<edges[eid].inside<<std::endl;
     }
 }
 
@@ -88,10 +89,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs+1)+dims.x+(dims.x+1)*(dims.y+1);
             faces[fid].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+(dims.x+1)*(dims.y+1);
             faces[fid].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x+(dims.x+1)*(dims.y+1);
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
 
         }
         else if(direction==FaceDirection::BACK)
@@ -104,10 +105,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs+1)+dims.x+(dims.x+1)*(dims.y+1);
             faces[fid].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs+1)*(2*dims.x+1)+xOfs+(dims.x+1)*(dims.y+1);
             faces[fid].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+(xOfs)+dims.x+(dims.x+1)*(dims.y+1);
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
 
         }
         else if(direction==FaceDirection::TOP)
@@ -120,10 +121,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs+1);
             faces[fid].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs+(dims.x+1)*(dims.y+1);
             faces[fid].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+xOfs;
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
         }
         else if(direction==FaceDirection::BOTTOM)
         {
@@ -135,10 +136,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs+1);
             faces[fid].e3 = (zOfs+1)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(2*dims.x+1)+xOfs+(dims.x+1)*(dims.y+1);
             faces[fid].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+(xOfs);
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
 
         }
         else if(direction==FaceDirection::LEFT)
@@ -151,10 +152,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x+(dims.x+1)*(dims.y+1);
             faces[fid].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+xOfs;
             faces[fid].e4 = (zOfs+1)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x+(dims.x+1)*(dims.y+1);
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
         }
         else if(direction==FaceDirection::RIGHT)
         {
@@ -166,10 +167,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             faces[fid].e2 = (zOfs+1)*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x+(dims.x+1)*(dims.y+1);
             faces[fid].e3 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+(yOfs)*(dims.x+1)+xOfs;
             faces[fid].e4 = zOfs*(((2*(dims.x+1)*(dims.y+1))-(dims.x+1)-(dims.y+1))+((dims.x+1)*(dims.y+1)))+yOfs*(2*dims.x+1)+xOfs+dims.x+(dims.x+1)*(dims.y+1);
-            addEdge(Edge3D(faces[fid].e1,f.v1,f.v2,f.inside));
-            addEdge(Edge3D(faces[fid].e2,f.v2,f.v3,f.inside));
-            addEdge(Edge3D(faces[fid].e3,f.v3,f.v4,f.inside));
-            addEdge(Edge3D(faces[fid].e4,f.v4,f.v1,f.inside));
+            addEdge(Edge3D((faces[fid].e1)+1,f.v1,f.v2,f.inside));
+            addEdge(Edge3D((faces[fid].e2)+1,f.v2,f.v3,f.inside));
+            addEdge(Edge3D((faces[fid].e3)+1,f.v3,f.v4,f.inside));
+            addEdge(Edge3D((faces[fid].e4)+1,f.v4,f.v1,f.inside));
 
         }
     }
@@ -177,10 +178,10 @@ void DECMesh3D::addFace(const Face3D& f,FaceDirection direction)
             f.inside==GridState::INSIDE)
     {
         faces[fid].inside = f.inside;
-        addEdge(Edge3D(faces[fid].e1,faces[fid].v1,faces[fid].v2,f.inside));
-        addEdge(Edge3D(faces[fid].e2,faces[fid].v2,faces[fid].v3,f.inside));
-        addEdge(Edge3D(faces[fid].e3,faces[fid].v3,faces[fid].v4,f.inside));
-        addEdge(Edge3D(faces[fid].e4,faces[fid].v4,faces[fid].v1,f.inside));
+        addEdge(Edge3D((faces[fid].e1)+1,faces[fid].v1,faces[fid].v2,f.inside));
+        addEdge(Edge3D((faces[fid].e2)+1,faces[fid].v2,faces[fid].v3,f.inside));
+        addEdge(Edge3D((faces[fid].e3)+1,faces[fid].v3,faces[fid].v4,f.inside));
+        addEdge(Edge3D((faces[fid].e4)+1,faces[fid].v4,faces[fid].v1,f.inside));
     }
     else {
         std::cout<<"FACE CONFLICT"<<std::endl;
@@ -276,6 +277,16 @@ VoxelIterator& DECMesh3D::getVoxelIteratorEnd()
     return voxelsEnd;
 }
 
+Voxel3D* DECMesh3D::getVoxels()
+{
+    return voxels.data();
+}
+
+Face3D* DECMesh3D::getFaces()
+{
+    return faces.data();
+}
+
 glm::uvec3 DECMesh3D::getDimensions()
 {
     return dims;
@@ -288,7 +299,7 @@ unsigned int DECMesh3D::getPointIndex(const Vertex3D& v)
 
 unsigned int DECMesh3D::getEdgeIndex(const Edge3D& e)
 {
-    return e.id;
+    return labs(e.id)-1;
 }
 
 unsigned int DECMesh3D::getFaceIndex(const Face3D& f)

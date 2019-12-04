@@ -4,7 +4,7 @@
 
 AbstractSolver::AbstractSolver()
 {
-    maxParticles=200000;
+    maxParticles=2000000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
