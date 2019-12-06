@@ -14,6 +14,7 @@ public:
     int id;
     GridState inside;
 
+    glm::dvec3 center;
     glm::dvec3 normal;
 
     union

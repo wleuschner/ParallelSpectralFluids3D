@@ -1,5 +1,6 @@
 #ifndef VOXEL_3D_H
 #define VOXEL_3D_H
+#include<glm/glm.hpp>
 #include"gridenums.h"
 
 class Voxel3D
@@ -13,6 +14,7 @@ public:
 
     int id;
     GridState inside;
+    glm::dvec3 center;
 
     union
     {

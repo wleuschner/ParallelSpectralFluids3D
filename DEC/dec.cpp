@@ -171,12 +171,12 @@ Eigen::SparseMatrix<double> derivative2(DECMesh3D& mesh,bool dual)
         Voxel3D* voxel = &voxels[i];
         if(voxel->inside==GridState::INSIDE)
         {
-            tripleList[i*6] = Eigen::Triplet<double>(labs(voxel->f1)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f1,voxel->v1,voxel->v2,voxel->v6,voxel->v5));
-            tripleList[i*6+1] = Eigen::Triplet<double>(labs(voxel->f2)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f2,voxel->v8,voxel->v7,voxel->v3,voxel->v4));
-            tripleList[i*6+2] = Eigen::Triplet<double>(labs(voxel->f3)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f3,voxel->v5,voxel->v6,voxel->v7,voxel->v8));
-            tripleList[i*6+3] = Eigen::Triplet<double>(labs(voxel->f4)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f4,voxel->v4,voxel->v3,voxel->v2,voxel->v1));
-            tripleList[i*6+4] = Eigen::Triplet<double>(labs(voxel->f5)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f5,voxel->v4,voxel->v1,voxel->v5,voxel->v8));
-            tripleList[i*6+5] = Eigen::Triplet<double>(labs(voxel->f6)-1,labs(voxel->id)-1, mesh.getFaceSignum(voxel->f6,voxel->v2,voxel->v3,voxel->v7,voxel->v6));
+            tripleList[i*6] = Eigen::Triplet<double>(labs(voxel->f1)-1,labs(voxel->id)-1, voxel->f1>0?1:-1);
+            tripleList[i*6+1] = Eigen::Triplet<double>(labs(voxel->f2)-1,labs(voxel->id)-1, voxel->f2>0?1:-1);
+            tripleList[i*6+2] = Eigen::Triplet<double>(labs(voxel->f3)-1,labs(voxel->id)-1, voxel->f3>0?1:-1);
+            tripleList[i*6+3] = Eigen::Triplet<double>(labs(voxel->f4)-1,labs(voxel->id)-1, voxel->f4>0?1:-1);
+            tripleList[i*6+4] = Eigen::Triplet<double>(labs(voxel->f5)-1,labs(voxel->id)-1, voxel->f5>0?1:-1);
+            tripleList[i*6+5] = Eigen::Triplet<double>(labs(voxel->f6)-1,labs(voxel->id)-1, voxel->f6>0?1:-1);
         }
     }
     d.setFromTriplets(tripleList.begin(),tripleList.end());
@@ -192,7 +192,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
     std::vector<Eigen::Triplet<double>> tripleList;
     tripleList.resize(mesh.getNumFaces()*4);
     Face3D* faces = mesh.getFaces();
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(int i=0;i<mesh.getNumFaces();i++)
     {
         Face3D* face = &faces[i];
@@ -203,10 +203,10 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
             unsigned int v3 = face->v3;
             unsigned int v4 = face->v4;
 
-            tripleList[i*4] = Eigen::Triplet<double>(face->e1,mesh.getFaceIndex(*face),mesh.getEdgeSignum(face->e1,v1,v2));
-            tripleList[i*4+1] = Eigen::Triplet<double>(face->e2,mesh.getFaceIndex(*face),mesh.getEdgeSignum(face->e2,v2,v3));
-            tripleList[i*4+2] = Eigen::Triplet<double>(face->e3,mesh.getFaceIndex(*face),mesh.getEdgeSignum(face->e3,v3,v4));
-            tripleList[i*4+3] = Eigen::Triplet<double>(face->e4,mesh.getFaceIndex(*face),mesh.getEdgeSignum(face->e4,v4,v1));
+            tripleList[i*4] = Eigen::Triplet<double>(labs(face->e1)-1,mesh.getFaceIndex(*face),face->e1>=0?1:-1);
+            tripleList[i*4+1] = Eigen::Triplet<double>(labs(face->e2)-1,mesh.getFaceIndex(*face),face->e2>=0?1:-1);
+            tripleList[i*4+2] = Eigen::Triplet<double>(labs(face->e3)-1,mesh.getFaceIndex(*face),face->e3>=0?1:-1);
+            tripleList[i*4+3] = Eigen::Triplet<double>(labs(face->e4)-1,mesh.getFaceIndex(*face),face->e4>=0?1:-1);
         }
     }
     d.setFromTriplets(tripleList.begin(),tripleList.end());

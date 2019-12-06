@@ -110,8 +110,8 @@ void GLCanvas::simulate()
     for(unsigned int i=0;i<2000;i++)
     {
         glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
-        pos.y= mesh->getAABB().min.y+0.1f;
-        //pos.y+=((rand()%1024)/1024.0-0.5);
+        //pos.y= mesh->getAABB().min.y+0.1f;
+        pos.y+=((rand()%1024)/1024.0-0.5)*0.5;
         //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
         pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
         pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.5;

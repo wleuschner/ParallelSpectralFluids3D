@@ -33,6 +33,11 @@ public:
     void addFace(const Face3D& f,FaceDirection direction);
     void addVoxel(const Voxel3D& v);
 
+    void setPointInside(const Vertex3D& v);
+    void setEdgeInside(const Edge3D& e);
+    void setFaceInside(const Face3D& f);
+    void setVoxelInside(const Voxel3D& v);
+
     PointIterator& getPointIteratorBegin();
     EdgeIterator& getEdgeIteratorBegin();
     FaceIterator& getFaceIteratorBegin();

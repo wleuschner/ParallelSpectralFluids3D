@@ -4,6 +4,7 @@
 
 Edge3D::Edge3D()
 {
+    this->id = 0;
     inside = GridState::UNINITIALIZED;
 }
 

@@ -188,15 +188,11 @@ void PSFSolverGPU::buildLaplace()
         {
             if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
             {
-                glm::dvec3 p1=glm::dvec3(vertices[it->v1].pos);
-                glm::dvec3 p2=glm::dvec3(vertices[it->v2].pos);
-                glm::dvec3 p3=glm::dvec3(vertices[it->v3].pos);
-                glm::dvec3 p4=glm::dvec3(vertices[it->v4].pos);
                 AABB aabb = mesh->getAABB();
                 unsigned int zId = (it->id%(dims.x*dims.y+2*dims.x*dims.y-dims.x-dims.y));
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))&&
-                   (p1.y<=aabb.min.y+0.3||p2.y<=aabb.min.y+0.3||p3.y<=aabb.min.y+0.3||p4.y<=aabb.min.y+0.3))
-                        velocityField(it->id) = (it->normal.y>0?1:-1)*0.1;
+                   it->center.y<=aabb.min.y+0.1)
+                        velocityField(it->id) = (it->normal.y>0?1:-1)*0.00001;
 
             }
         }

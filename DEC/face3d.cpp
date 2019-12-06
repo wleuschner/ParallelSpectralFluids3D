@@ -2,6 +2,7 @@
 
 Face3D::Face3D()
 {
+    this->id=0;
     inside = GridState::UNINITIALIZED;
 }
 

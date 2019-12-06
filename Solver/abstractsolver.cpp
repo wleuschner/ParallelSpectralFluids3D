@@ -4,7 +4,7 @@
 
 AbstractSolver::AbstractSolver()
 {
-    maxParticles=2000000;
+    maxParticles=200000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
@@ -230,17 +230,17 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
 
 
 
-            double s1 = decMesh.getFaceSignum(it->f1,it->v1,it->v2,it->v6,it->v5);
-            double s2 = decMesh.getFaceSignum(it->f2,it->v3,it->v4,it->v8,it->v7);
-            double s3 = decMesh.getFaceSignum(it->f3,it->v7,it->v8,it->v5,it->v6);
-            double s4 = decMesh.getFaceSignum(it->f4,it->v4,it->v3,it->v2,it->v1);
-            double s5 = decMesh.getFaceSignum(it->f5,it->v4,it->v1,it->v5,it->v8);
-            double s6 = decMesh.getFaceSignum(it->f6,it->v2,it->v3,it->v7,it->v6);
+            double s1 = it->f1>0?1:-1;
+            double s2 = it->f1>0?1:-1;
+            double s3 = it->f1>0?1:-1;
+            double s4 = it->f1>0?1:-1;
+            double s5 = it->f1>0?1:-1;
+            double s6 = it->f1>0?1:-1;
 
-            glm::vec3 center = vertices[it->v5].pos+0.5f*(vertices[it->v3].pos-vertices[it->v5].pos);
-            glm::vec3 velDir = 0.5f*glm::vec3((s1*velocityField(labs(f1.id)-1)*f1.normal-s2*velocityField(labs(f2.id)-1)*f2.normal))+
-                               0.5f*glm::vec3((s3*velocityField(labs(f3.id)-1)*f3.normal-s4*velocityField(labs(f4.id)-1)*f4.normal))+
-                               0.5f*glm::vec3((s5*velocityField(labs(f5.id)-1)*f5.normal-s6*velocityField(labs(f6.id)-1)*f6.normal));
+            glm::vec3 center = (f1.center+f2.center)/2.0;
+            glm::vec3 velDir = 0.5f*glm::vec3((s1*velocityField(labs(f1.id)-1)*f1.normal+s2*velocityField(labs(f2.id)-1)*f2.normal))+
+                               0.5f*glm::vec3((s3*velocityField(labs(f3.id)-1)*f3.normal+s4*velocityField(labs(f4.id)-1)*f4.normal))+
+                               0.5f*glm::vec3((s5*velocityField(labs(f5.id)-1)*f5.normal+s6*velocityField(labs(f6.id)-1)*f6.normal));
 
             velVerts[e].pos = center;
             e++;
