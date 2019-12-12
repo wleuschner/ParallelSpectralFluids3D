@@ -7,9 +7,7 @@ class Face3D
 {
 public:
     Face3D();
-    Face3D(int id,
-           unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4,
-           GridState inside);
+    Face3D(int id, GridState inside);
 
     int id;
     GridState inside;
@@ -33,12 +31,10 @@ public:
     {
         struct
         {
-            unsigned int v1;
-            unsigned int v2;
-            unsigned int v3;
-            unsigned int v4;
+            int v1;
+            int v2;
         };
-        unsigned int v[4];
+        int v[2];
     };
 };
 

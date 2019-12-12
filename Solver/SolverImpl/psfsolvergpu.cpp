@@ -251,12 +251,12 @@ void PSFSolverGPU::buildAdvection()
             unsigned int ie11 = f6.e1;
             unsigned int ie12 = f6.e3;
 
-            double s1 = decMesh.getFaceSignum(fit->f1,fit->v1,fit->v2,fit->v6,fit->v5);
-            double s2 = decMesh.getFaceSignum(fit->f2,fit->v8,fit->v7,fit->v3,fit->v4);
-            double s3 = decMesh.getFaceSignum(fit->f3,fit->v5,fit->v6,fit->v7,fit->v8);
-            double s4 = decMesh.getFaceSignum(fit->f4,fit->v4,fit->v3,fit->v2,fit->v1);
-            double s5 = decMesh.getFaceSignum(fit->f5,fit->v4,fit->v1,fit->v5,fit->v8);
-            double s6 = decMesh.getFaceSignum(fit->f6,fit->v2,fit->v3,fit->v7,fit->v6);
+            double s1 = decMesh.getFaceSignum(fit->f1);
+            double s2 = decMesh.getFaceSignum(fit->f2);
+            double s3 = decMesh.getFaceSignum(fit->f3);
+            double s4 = decMesh.getFaceSignum(fit->f4);
+            double s5 = decMesh.getFaceSignum(fit->f5);
+            double s6 = decMesh.getFaceSignum(fit->f6);
 
             for(unsigned int i=0;i<nEigenFunctions;i++)
             {

@@ -7,10 +7,7 @@ class Voxel3D
 {
 public:
     Voxel3D();
-    Voxel3D(unsigned int id,
-            unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4,
-            unsigned int v5,unsigned int v6,unsigned int v7,unsigned int v8,
-            GridState inside);
+    Voxel3D(unsigned int id,GridState inside);
 
     int id;
     GridState inside;
@@ -28,22 +25,6 @@ public:
             int f6;
         };
         int f[6];
-    };
-
-    union
-    {
-        struct
-        {
-            int v1;
-            int v2;
-            int v3;
-            int v4;
-            int v5;
-            int v6;
-            int v7;
-            int v8;
-        };
-        int v[8];
     };
 };
 

@@ -4,7 +4,8 @@
 
 AbstractSolver::AbstractSolver()
 {
-    maxParticles=200000;
+    //maxParticles=1000;
+    maxParticles=400000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
@@ -228,19 +229,10 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
             Face3D f5 = decMesh.getFace(it->f5);
             Face3D f6 = decMesh.getFace(it->f6);
 
-
-
-            double s1 = it->f1>0?1:-1;
-            double s2 = it->f1>0?1:-1;
-            double s3 = it->f1>0?1:-1;
-            double s4 = it->f1>0?1:-1;
-            double s5 = it->f1>0?1:-1;
-            double s6 = it->f1>0?1:-1;
-
             glm::vec3 center = (f1.center+f2.center)/2.0;
-            glm::vec3 velDir = 0.5f*glm::vec3((s1*velocityField(labs(f1.id)-1)*f1.normal+s2*velocityField(labs(f2.id)-1)*f2.normal))+
-                               0.5f*glm::vec3((s3*velocityField(labs(f3.id)-1)*f3.normal+s4*velocityField(labs(f4.id)-1)*f4.normal))+
-                               0.5f*glm::vec3((s5*velocityField(labs(f5.id)-1)*f5.normal+s6*velocityField(labs(f6.id)-1)*f6.normal));
+            glm::vec3 velDir = -0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal))+
+                               -0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
+                               0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal));
 
             velVerts[e].pos = center;
             e++;

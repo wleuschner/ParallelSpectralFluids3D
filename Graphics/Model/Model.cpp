@@ -213,7 +213,7 @@ DECMesh3D Model::voxelize(float resolution)
     glm::mat4 pv = orthProj*glm::translate(glm::mat4(1.0f),glm::vec3(-getAABB().getCenter().x,-getAABB().getCenter().y,-getAABB().getCenter().z));
 
 
-    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width+2,height+2,depth+2),resolution,aabb.min);
+    DECMesh3D decMesh = DECMesh3D(resolution,glm::uvec3(width,height,depth),resolution,aabb.min);
     FrameBufferObject fbo;
     TextureArray texArray;
     texArray.bind(0);
@@ -284,19 +284,20 @@ DECMesh3D Model::voxelize(float resolution)
                 {
                     if(buffer[(x*4)+width*4*y+(width*4*height)*l]&1)
                     {
-                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
-                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
+                        unsigned int z = (32*4*l+d);
+                        v1 = decMesh.getPointIndex(x,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = decMesh.getPointIndex(x+1,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = decMesh.getPointIndex(x+1,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = decMesh.getPointIndex(x,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
 
-                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
-                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
-                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
-                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1)*((width+2)*(height+2))+(y+1)*(width+2)+x+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        v5 = decMesh.getPointIndex(x,y,z);//((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
+                        v6 = decMesh.getPointIndex(x+1,y,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = decMesh.getPointIndex(x+1,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = decMesh.getPointIndex(x,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.setVoxelInside(Voxel3D(decMesh.getVoxelIndex(x,y,z),GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
-                        float zp = getAABB().min.z+l*32*4*resolution+d*resolution;
+                        float zp = getAABB().min.z+z*resolution;
                         glm::vec3 p1(xp,yp+resolution,zp);
                         glm::vec3 p2(xp+resolution,yp+resolution,zp);
                         glm::vec3 p3(xp+resolution,yp+resolution,zp+resolution);
@@ -333,7 +334,7 @@ DECMesh3D Model::voxelize(float resolution)
                         v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1))+(x+1+1);
                         v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1+1);
                         v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+32)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+32)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+32)*resolution;
@@ -372,7 +373,7 @@ DECMesh3D Model::voxelize(float resolution)
                         v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1))+(x+1+1);
                         v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1+1);
                         v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+64)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+64)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+64)*resolution;
@@ -412,7 +413,7 @@ DECMesh3D Model::voxelize(float resolution)
                         v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1))+(x+1+1);
                         v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1+1);
                         v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+96)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,v1,v2,v3,v4,v5,v6,v7,v8,GridState::INSIDE));
+                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+96)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
                         float zp = getAABB().min.z+l*32*4*resolution+(d+96)*resolution;

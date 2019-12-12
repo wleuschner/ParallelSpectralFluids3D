@@ -28,11 +28,6 @@ public:
     DECMesh3D();
     DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize,glm::vec3 min);
 
-    void addPoint(const Vertex3D& v);
-    void addEdge(const Edge3D& e);
-    void addFace(const Face3D& f,FaceDirection direction);
-    void addVoxel(const Voxel3D& v);
-
     void setPointInside(const Vertex3D& v);
     void setEdgeInside(const Edge3D& e);
     void setFaceInside(const Face3D& f);
@@ -50,6 +45,7 @@ public:
 
     Voxel3D* getVoxels();
     Face3D* getFaces();
+    Edge3D* getEdges();
 
     glm::uvec3 getDimensions();
 
@@ -65,19 +61,48 @@ public:
     Face3D getFace(int id);
     Voxel3D getVoxel(int id);
 
-    int getPointSignum(unsigned int id,unsigned int v1);
-    int getEdgeSignum(unsigned int id,unsigned int v1,unsigned int v2);
-    int getFaceSignum(unsigned int id,unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4);
-    int getVoxelSignum(unsigned int id,unsigned int v1,unsigned int v2,unsigned int v3,unsigned int v4,
-                                       unsigned int v5,unsigned int v6,unsigned int v7,unsigned int v8);
+    int getPointSignum(int id);
+    int getEdgeSignum(int id);
+    int getFaceSignum(int id);
+    int getVoxelSignum(int id);
 
     unsigned int getNumPoints();
     unsigned int getNumEdges();
     unsigned int getNumFaces();
     unsigned int getNumVoxels();
-private:
-    float voxelSize;
+
     float resolution;
+
+    unsigned int getVoxelIndex(unsigned int x,unsigned int y,unsigned z);
+
+    unsigned int getZFaceIndex(unsigned int x,unsigned int y,unsigned z);
+    unsigned int getYFaceIndex(unsigned int x,unsigned int y,unsigned z);
+    unsigned int getXFaceIndex(unsigned int x,unsigned int y,unsigned z);
+
+    unsigned int getZEdgeIndex(unsigned int x,unsigned int y,unsigned z);
+    unsigned int getYEdgeIndex(unsigned int x,unsigned int y,unsigned z);
+    unsigned int getXEdgeIndex(unsigned int x,unsigned int y,unsigned z);
+
+    unsigned int getPointIndex(unsigned int x,unsigned int y,unsigned z);
+
+    unsigned int signedIdToIndex(int id);
+    int indexToSignedId(unsigned int index,int signum);
+
+private:
+
+
+    unsigned int numZFaces;
+    unsigned int numYFaces;
+    unsigned int numXFaces;
+
+    unsigned int numXEdges;
+    unsigned int numYEdges;
+    unsigned int numZEdges;
+
+
+    bool checkInternalState();
+
+    float voxelSize;
 
     glm::vec3 min;
     glm::ivec3 dims;

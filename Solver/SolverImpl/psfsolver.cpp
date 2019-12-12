@@ -55,16 +55,27 @@ void PSFSolver::integrate()
     {
         if(simTime<it->lifeTime)
         {
-            unsigned int yOfs = static_cast<unsigned int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y)/resolution)+1;
-            unsigned int xOfs = static_cast<unsigned int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x)/resolution)+1;
-            unsigned int zOfs = static_cast<unsigned int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z)/resolution)+1;
+            int yOfs = static_cast<int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y)/resolution);
+            int xOfs = static_cast<int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x)/resolution);
+            int zOfs = static_cast<int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z)/resolution);
 
-            unsigned int zOfsMinus = static_cast<unsigned int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z-resolution/2)/resolution)+1;
-            unsigned int zOfsPlus = static_cast<unsigned int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z+resolution/2)/resolution)+1;
-            unsigned int yOfsMinus = static_cast<unsigned int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y-resolution/2)/resolution)+1;
-            unsigned int yOfsPlus = static_cast<unsigned int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y+resolution/2)/resolution)+1;
-            unsigned int xOfsMinus = static_cast<unsigned int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x-resolution/2)/resolution)+1;
-            unsigned int xOfsPlus = static_cast<unsigned int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x+resolution/2)/resolution)+1;
+            int zOfsMinus = static_cast<int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z-resolution/2)/resolution);
+            int zOfsPlus = static_cast<int>((mesh->getAABB().min.z+mesh->getAABB().getExtent().z+it->position.z+resolution/2)/resolution);
+            int yOfsMinus = static_cast<int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y-resolution/2)/resolution);
+            int yOfsPlus = static_cast<int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y+resolution/2)/resolution);
+            int xOfsMinus = static_cast<int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x-resolution/2)/resolution);
+            int xOfsPlus = static_cast<int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x+resolution/2)/resolution);
+
+            xOfs = glm::clamp(xOfs,0,int(dims.x-1));
+            yOfs = glm::clamp(yOfs,0,int(dims.y-1));
+            zOfs = glm::clamp(zOfs,0,int(dims.z-1));
+
+            xOfsMinus = glm::clamp(xOfsMinus,0,int(dims.x-1));
+            xOfsPlus = glm::clamp(xOfsPlus,0,int(dims.x-1));
+            yOfsMinus = glm::clamp(yOfsMinus,0,int(dims.y-1));
+            yOfsPlus = glm::clamp(yOfsPlus,0,int(dims.y-1));
+            zOfsMinus = glm::clamp(zOfsMinus,0,int(dims.z-1));
+            zOfsPlus = glm::clamp(zOfsPlus,0,int(dims.z-1));
 
             assert(zOfsMinus>=0);
             assert(zOfsPlus>=0);
@@ -73,20 +84,20 @@ void PSFSolver::integrate()
             assert(xOfsMinus>=0);
             assert(xOfsPlus>=0);
 
-            Voxel3D v1x = decMesh.getVoxel((zOfsMinus*(dims.y*dims.x)+yOfsMinus*dims.x+xOfs)+1);
-            Voxel3D v2x = decMesh.getVoxel((zOfsMinus*(dims.y*dims.x)+yOfsPlus*dims.x+xOfs)+1);
-            Voxel3D v3x = decMesh.getVoxel((zOfsPlus*(dims.y*dims.x)+yOfsMinus*dims.x+xOfs)+1);
-            Voxel3D v4x = decMesh.getVoxel((zOfsPlus*(dims.y*dims.x)+yOfsPlus*dims.x+xOfs)+1);
+            Voxel3D v1x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsMinus));
+            Voxel3D v2x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsMinus));
+            Voxel3D v3x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsPlus));
+            Voxel3D v4x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsPlus));
 
-            Voxel3D v1y = decMesh.getVoxel((zOfsMinus*(dims.y*dims.x)+yOfs*dims.x+xOfsMinus)+1);
-            Voxel3D v2y = decMesh.getVoxel((zOfsMinus*(dims.y*dims.x)+yOfs*dims.x+xOfsPlus)+1);
-            Voxel3D v3y = decMesh.getVoxel((zOfsPlus*(dims.y*dims.x)+yOfs*dims.x+xOfsMinus)+1);
-            Voxel3D v4y = decMesh.getVoxel((zOfsPlus*(dims.y*dims.x)+yOfs*dims.x+xOfsPlus)+1);
+            Voxel3D v1y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsMinus));
+            Voxel3D v2y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsMinus));
+            Voxel3D v3y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsPlus));
+            Voxel3D v4y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsPlus));
 
-            Voxel3D v1z = decMesh.getVoxel((zOfs*(dims.y*dims.x)+yOfsMinus*dims.x+xOfsMinus)+1);
-            Voxel3D v2z = decMesh.getVoxel((zOfs*(dims.y*dims.x)+yOfsMinus*dims.x+xOfsPlus)+1);
-            Voxel3D v3z = decMesh.getVoxel((zOfs*(dims.y*dims.x)+yOfsPlus*dims.x+xOfsMinus)+1);
-            Voxel3D v4z = decMesh.getVoxel((zOfs*(dims.y*dims.x)+yOfsPlus*dims.x+xOfsPlus)+1);
+            Voxel3D v1z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfsMinus,zOfs));
+            Voxel3D v2z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfsMinus,zOfs));
+            Voxel3D v3z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfsPlus,zOfs));
+            Voxel3D v4z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfsPlus,zOfs));
 
             Face3D xf = decMesh.getFace(v1x.f5);
             Face3D yf = decMesh.getFace(v1y.f3);
@@ -95,66 +106,36 @@ void PSFSolver::integrate()
             glm::vec3 cf1x = xf.center;
             glm::vec3 cf1y = yf.center;
             glm::vec3 cf1z = zf.center;
-/*
-            double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
-            vel1x = v1x.f5>0?1:-1*velocityField(labs(v1x.f5)-1);
-            vel3x = v1x.f6>0?1:-1*velocityField(labs(v1x.f6)-1);
-            vel2x = v2x.f5>0?1:-1*velocityField(labs(v2x.f5)-1);
-            vel4x = v2x.f6>0?1:-1*velocityField(labs(v2x.f6)-1);
-            vel5x = v3x.f5>0?1:-1*velocityField(labs(v3x.f5)-1);
-            vel7x = v3x.f6>0?1:-1*velocityField(labs(v3x.f6)-1);
-            vel6x = v4x.f5>0?1:-1*velocityField(labs(v4x.f5)-1);
-            vel8x = v4x.f6>0?1:-1*velocityField(labs(v4x.f6)-1);
-
-            double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
-            vel1y = v1y.f3>0?1:-1*velocityField(labs(v1y.f3)-1);
-            vel2y = v1y.f4>0?1:-1*velocityField(labs(v1y.f4)-1);
-            vel3y = v2y.f3>0?1:-1*velocityField(labs(v2y.f3)-1);
-            vel4y = v2y.f4>0?1:-1*velocityField(labs(v2y.f4)-1);
-            vel5y = v3y.f3>0?1:-1*velocityField(labs(v3y.f3)-1);
-            vel6y = v3y.f4>0?1:-1*velocityField(labs(v3y.f4)-1);
-            vel7y = v4y.f3>0?1:-1*velocityField(labs(v4y.f3)-1);
-            vel8y = v4y.f4>0?1:-1*velocityField(labs(v4y.f4)-1);
-
-            double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
-            vel1z = v1z.f1>0?1:-1*velocityField(labs(v1z.f1)-1);
-            vel2z = v3z.f1>0?1:-1*velocityField(labs(v3z.f1)-1);
-            vel3z = v2z.f1>0?1:-1*velocityField(labs(v2z.f1)-1);
-            vel4z = v4z.f1>0?1:-1*velocityField(labs(v4z.f1)-1);
-            vel5z = v1z.f2>0?1:-1*velocityField(labs(v1z.f2)-1);
-            vel6z = v3z.f2>0?1:-1*velocityField(labs(v3z.f2)-1);
-            vel7z = v2z.f2>0?1:-1*velocityField(labs(v2z.f2)-1);
-            vel8z = v4z.f2>0?1:-1*velocityField(labs(v4z.f2)-1);*/
 
             double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
-            vel1x = velocityField(labs(v1x.f5)-1);
-            vel3x = velocityField(labs(v1x.f6)-1);
-            vel2x = velocityField(labs(v2x.f5)-1);
-            vel4x = velocityField(labs(v2x.f6)-1);
-            vel5x = velocityField(labs(v3x.f5)-1);
-            vel7x = velocityField(labs(v3x.f6)-1);
-            vel6x = velocityField(labs(v4x.f5)-1);
-            vel8x = velocityField(labs(v4x.f6)-1);
+            vel1x = -velocityField(decMesh.signedIdToIndex(v1x.f5));
+            vel3x = -velocityField(decMesh.signedIdToIndex(v1x.f6));
+            vel2x = -velocityField(decMesh.signedIdToIndex(v2x.f5));
+            vel4x = -velocityField(decMesh.signedIdToIndex(v2x.f6));
+            vel5x = -velocityField(decMesh.signedIdToIndex(v3x.f5));
+            vel7x = -velocityField(decMesh.signedIdToIndex(v3x.f6));
+            vel6x = -velocityField(decMesh.signedIdToIndex(v4x.f5));
+            vel8x = -velocityField(decMesh.signedIdToIndex(v4x.f6));
 
             double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
-            vel1y = velocityField(labs(v1y.f3)-1);
-            vel2y = velocityField(labs(v1y.f4)-1);
-            vel3y = velocityField(labs(v2y.f3)-1);
-            vel4y = velocityField(labs(v2y.f4)-1);
-            vel5y = velocityField(labs(v3y.f3)-1);
-            vel6y = velocityField(labs(v3y.f4)-1);
-            vel7y = velocityField(labs(v4y.f3)-1);
-            vel8y = velocityField(labs(v4y.f4)-1);
+            vel1y = -velocityField(decMesh.signedIdToIndex(v1y.f3));
+            vel2y = -velocityField(decMesh.signedIdToIndex(v1y.f4));
+            vel3y = -velocityField(decMesh.signedIdToIndex(v2y.f3));
+            vel4y = -velocityField(decMesh.signedIdToIndex(v2y.f4));
+            vel5y = -velocityField(decMesh.signedIdToIndex(v3y.f3));
+            vel6y = -velocityField(decMesh.signedIdToIndex(v3y.f4));
+            vel7y = -velocityField(decMesh.signedIdToIndex(v4y.f3));
+            vel8y = -velocityField(decMesh.signedIdToIndex(v4y.f4));
 
             double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
-            vel1z = velocityField(labs(v1z.f1)-1);
-            vel2z = velocityField(labs(v3z.f1)-1);
-            vel3z = velocityField(labs(v2z.f1)-1);
-            vel4z = velocityField(labs(v4z.f1)-1);
-            vel5z = velocityField(labs(v1z.f2)-1);
-            vel6z = velocityField(labs(v3z.f2)-1);
-            vel7z = velocityField(labs(v2z.f2)-1);
-            vel8z = velocityField(labs(v4z.f2)-1);
+            vel1z = velocityField(decMesh.signedIdToIndex(v1z.f1));
+            vel2z = velocityField(decMesh.signedIdToIndex(v3z.f1));
+            vel3z = velocityField(decMesh.signedIdToIndex(v2z.f1));
+            vel4z = velocityField(decMesh.signedIdToIndex(v4z.f1));
+            vel5z = velocityField(decMesh.signedIdToIndex(v1z.f2));
+            vel6z = velocityField(decMesh.signedIdToIndex(v3z.f2));
+            vel7z = velocityField(decMesh.signedIdToIndex(v2z.f2));
+            vel8z = velocityField(decMesh.signedIdToIndex(v4z.f2));
 
             glm::dvec3 particleNormalizedX;
             glm::dvec3 particleNormalizedY;
@@ -202,10 +183,10 @@ void PSFSolver::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            //mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
         }
     }
-    mat.pruned();
+    //mat.pruned();
 
     eigenValues.resize(nEigenFunctions);
     velBasisField.resize(decMesh.getNumFaces(),nEigenFunctions);
@@ -220,37 +201,53 @@ void PSFSolver::buildLaplace()
             Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
-            int nconv = solver.compute(1000,1e-6,Spectra::WHICH_SM);
+            int nconv = solver.compute();//solver.compute(1000,1e-6,Spectra::WHICH_LM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
 
                 Eigen::VectorXd tempEigenValues = solver.eigenvalues().real();
                 Eigen::MatrixXd tempEigenVectors = solver.eigenvectors().real();
+                bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
-                    if(std::abs(tempEigenValues(i))>1e-10)
+                    //if(std::abs(tempEigenValues(i))>0.0)
                     {
+                        bool doubleEv = false;
                         for(unsigned int j=0;j<foundEigenValues;j++)
                         {
-                            if((velBasisField.col(j).dot(tempEigenVectors.col(i)))>1.0-std::numeric_limits<double>::epsilon())
+                            if(abs(velBasisField.col(j).dot(tempEigenVectors.col(i))-1.0)<std::numeric_limits<double>::epsilon())
                             {
                                 std::cout<<"Already Inside"<<std::endl;
-                                continue;
+                                doubleEv = true;
+                                break;
                             }
                         }
+                        if(!doubleEv)
+                        {
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
-                        omega = tempEigenValues(i);
+                        //if(tempEigenValues(i)!=0.0)
+                        {
+                            omega = tempEigenValues(i);
+                            onlyZero = false;
+                        }
                         eigenValues(foundEigenValues) = tempEigenValues(i);
                         velBasisField.col(foundEigenValues) = tempEigenVectors.col(i);
                         foundEigenValues++;
+                        }
                     }
-                    else
+                    //else
                     {
                         std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
                     }
                 }
-                omega+=1e-6;
+                if(onlyZero)
+                  omega+=1e-6;
                 decompositionDone = true;
+            }
+            else
+            {
+                std::cout<<"Nothing Found"<<std::endl;
+                omega+=1e-6;
             }
         }
         catch(std::runtime_error e)
@@ -299,7 +296,7 @@ void PSFSolver::buildLaplace()
                 if((p1.x>=0.0&&p1.x<=0.0&&p1.y==0.0&&p2.x>=0.0&&p2.x<=0.0&&p2.y==0.0))
                 {
 
-                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*2;
+                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*10;
                 }
                 //if((p1.x>=0.5&&p1.x<=0.7&&p1.y==0.0&&p2.x>=0.5&&p2.x<=0.7&&p2.y==0.0))
                 //{
@@ -315,7 +312,7 @@ void PSFSolver::buildLaplace()
     }
     setInitialVorticityField(vorticityField);
 
-/*
+
     velocityField = Eigen::VectorXd::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
     for(FaceIterator it=decMesh.getFaceIteratorBegin();it!=decMesh.getFaceIteratorEnd();it++)
@@ -324,20 +321,15 @@ void PSFSolver::buildLaplace()
         {
             if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
             {
-                //glm::dvec3 p1=glm::dvec3(vertices[it->v1].pos);
-                //glm::dvec3 p2=glm::dvec3(vertices[it->v2].pos);
-                //glm::dvec3 p3=glm::dvec3(vertices[it->v3].pos);
-                //glm::dvec3 p4=glm::dvec3(vertices[it->v4].pos);
                 AABB aabb = mesh->getAABB();
-                unsigned int zId = (decMesh.getFaceIndex(*it)%(dims.x*dims.y+2*dims.x*dims.y-dims.x-dims.y));
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))&&
-                   it->center.y<aabb.min.y+0.2)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?1:-1)*0.1;
+                   it->center.y<aabb.min.y+0.4)
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?1:-1)*1.0;
 
             }
         }
     }
-    setInitialVelocityField(velocityField);*/
+    setInitialVelocityField(velocityField);
 }
 
 void PSFSolver::buildAdvection()
@@ -354,6 +346,8 @@ void PSFSolver::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
+    double scale = (decMesh.resolution/2)*(decMesh.resolution/2);
+
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)
@@ -365,18 +359,18 @@ void PSFSolver::buildAdvection()
             Face3D f5 = decMesh.getFace(fit->f5);
             Face3D f6 = decMesh.getFace(fit->f6);
 
-            unsigned int ie1 = labs(f1.e1)-1;
-            unsigned int ie2 = labs(f1.e2)-1;
-            unsigned int ie3 = labs(f1.e3)-1;
-            unsigned int ie4 = labs(f1.e4)-1;
-            unsigned int ie5 = labs(f2.e1)-1;
-            unsigned int ie6 = labs(f2.e2)-1;
-            unsigned int ie7 = labs(f2.e3)-1;
-            unsigned int ie8 = labs(f2.e4)-1;
-            unsigned int ie9 = labs(f5.e1)-1;
-            unsigned int ie10 = labs(f5.e3)-1;
-            unsigned int ie11 = labs(f6.e1)-1;
-            unsigned int ie12 = labs(f6.e3)-1;
+            unsigned int ie1 = decMesh.signedIdToIndex(f1.e1);
+            unsigned int ie2 = decMesh.signedIdToIndex(f1.e2);
+            unsigned int ie3 = decMesh.signedIdToIndex(f1.e3);
+            unsigned int ie4 = decMesh.signedIdToIndex(f1.e4);
+            unsigned int ie5 = decMesh.signedIdToIndex(f2.e1);
+            unsigned int ie6 = decMesh.signedIdToIndex(f2.e2);
+            unsigned int ie7 = decMesh.signedIdToIndex(f2.e3);
+            unsigned int ie8 = decMesh.signedIdToIndex(f2.e4);
+            unsigned int ie9 = decMesh.signedIdToIndex(f5.e1);
+            unsigned int ie10 = decMesh.signedIdToIndex(f5.e3);
+            unsigned int ie11 = decMesh.signedIdToIndex(f6.e1);
+            unsigned int ie12 = decMesh.signedIdToIndex(f6.e3);
 
             double se1 = f1.e1>0?1:-1;
             double se2 = f1.e2>0?1:-1;
@@ -390,11 +384,19 @@ void PSFSolver::buildAdvection()
             double se10 = f5.e3>0?1:-1;
             double se11 = f6.e1>0?1:-1;
             double se12 = f6.e3>0?1:-1;
-/*
+
             Edge3D e1 = decMesh.getEdge(f1.e1);
             Edge3D e2 = decMesh.getEdge(f1.e2);
             Edge3D e3 = decMesh.getEdge(f1.e3);
             Edge3D e4 = decMesh.getEdge(f1.e4);
+            Edge3D e5 = decMesh.getEdge(f2.e1);
+            Edge3D e6 = decMesh.getEdge(f2.e2);
+            Edge3D e7 = decMesh.getEdge(f2.e3);
+            Edge3D e8 = decMesh.getEdge(f2.e4);
+            Edge3D e9 = decMesh.getEdge(f5.e1);
+            Edge3D e10 = decMesh.getEdge(f5.e3);
+            Edge3D e11 = decMesh.getEdge(f6.e1);
+            Edge3D e12 = decMesh.getEdge(f6.e3);
 
             Vertex e1v1 = vertices[e1.v1];
             Vertex e1v2 = vertices[e1.v2];
@@ -405,10 +407,24 @@ void PSFSolver::buildAdvection()
             Vertex e4v1 = vertices[e4.v1];
             Vertex e4v2 = vertices[e4.v2];
 
+            Vertex e5v1 = vertices[e5.v1];
+            Vertex e5v2 = vertices[e5.v2];
+            Vertex e6v1 = vertices[e6.v1];
+            Vertex e6v2 = vertices[e6.v2];
+            Vertex e7v1 = vertices[e7.v1];
+            Vertex e7v2 = vertices[e7.v2];
+            Vertex e8v1 = vertices[e8.v1];
+            Vertex e8v2 = vertices[e8.v2];
+
             glm::dvec3 evec1 = glm::dvec3(e1v2.pos-e1v1.pos);
             glm::dvec3 evec2 = glm::dvec3(e2v2.pos-e2v1.pos);
             glm::dvec3 evec3 = glm::dvec3(e3v2.pos-e3v1.pos);
-            glm::dvec3 evec4 = glm::dvec3(e4v2.pos-e4v1.pos);*/
+            glm::dvec3 evec4 = glm::dvec3(e4v2.pos-e4v1.pos);
+
+            glm::dvec3 evec5 = glm::dvec3(e5v2.pos-e5v1.pos);
+            glm::dvec3 evec6 = glm::dvec3(e6v2.pos-e6v1.pos);
+            glm::dvec3 evec7 = glm::dvec3(e7v2.pos-e7v1.pos);
+            glm::dvec3 evec8 = glm::dvec3(e8v2.pos-e8v1.pos);
 
             double s1 = fit->f1>0?1:-1;
             double s2 = fit->f2>0?1:-1;
@@ -428,6 +444,13 @@ void PSFSolver::buildAdvection()
 
                 for(unsigned int j=0;j<nEigenFunctions;j++)
                 {
+                    assert(glm::dot(glm::cross(s1*f1.normal,-s4*f4.normal),evec1)>0.0);
+                    assert(glm::dot(glm::cross(-s1*f1.normal,s3*f3.normal),-evec3)>0.0);
+
+                    //assert(glm::dot(glm::cross(s2*f2.normal,-s4*f4.normal),evec5)>0.0);
+                    //assert(glm::dot(glm::cross(-s2*f2.normal,s3*f3.normal),evec7)>0.0);
+
+
                     double vel1b = s1*velBasisField(labs(fit->f1)-1,j);
                     double vel2b = s2*velBasisField(labs(fit->f2)-1,j);
                     double vel3b = s3*velBasisField(labs(fit->f3)-1,j);
@@ -441,20 +464,20 @@ void PSFSolver::buildAdvection()
                     //assert(glm::dot(evec1,se4*glm::cross(-s1*f1.normal,s5*f5.normal))>0.0);
 
 
-                    wedges[i](ie1,j) += (0.25)*(-vel1a*vel4b+vel1b*vel4a)*(glm::dot(glm::cross(-s1*f1.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie2,j) += (0.25)*(-vel1a*vel6b+vel1b*vel6a)*(glm::dot(glm::cross(s1*f1.normal,-s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie3,j) += (0.25)*(-vel1a*vel3b+vel1b*vel3a)*(glm::dot(glm::cross(s1*f1.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie4,j) += (0.25)*(-vel1a*vel5b+vel1b*vel5a)*(glm::dot(glm::cross(-s1*f1.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie1,j) += (scale)*(-vel1a*vel4b+vel1b*vel4a)*(glm::dot(glm::cross(-s1*f1.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (scale)*(-vel1a*vel6b+vel1b*vel6a)*(glm::dot(glm::cross(s1*f1.normal,-s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (scale)*(-vel1a*vel3b+vel1b*vel3a)*(glm::dot(glm::cross(s1*f1.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie4,j) += (scale)*(-vel1a*vel5b+vel1b*vel5a)*(glm::dot(glm::cross(-s1*f1.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie5,j) += (0.25)*(-vel2a*vel4b+vel2b*vel4a)*(glm::dot(glm::cross(s2*f2.normal,-s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie6,j) += (0.25)*(-vel2a*vel5b+vel2b*vel5a)*(glm::dot(glm::cross(s2*f2.normal,-s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie7,j) += (0.25)*(-vel2a*vel3b+vel2b*vel3a)*(glm::dot(glm::cross(-s2*f2.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie8,j) += (0.25)*(-vel2a*vel6b+vel2b*vel6a)*(glm::dot(glm::cross(-s2*f2.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie5,j) += (scale)*(-vel2a*vel4b+vel2b*vel4a)*(glm::dot(glm::cross(s2*f2.normal,-s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (scale)*(-vel2a*vel5b+vel2b*vel5a)*(glm::dot(glm::cross(s2*f2.normal,-s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie7,j) += (scale)*(-vel2a*vel3b+vel2b*vel3a)*(glm::dot(glm::cross(-s2*f2.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie8,j) += (scale)*(-vel2a*vel6b+vel2b*vel6a)*(glm::dot(glm::cross(-s2*f2.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie9,j) += (0.25)*(-vel5a*vel4b+vel5b*vel4a)*(glm::dot(glm::cross(-s5*f5.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie10,j) += (0.25)*(-vel5a*vel3b+vel5b*vel3a)*(glm::dot(glm::cross(s5*f5.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie11,j) += (0.25)*(-vel6a*vel4b+vel6b*vel4a)*(glm::dot(glm::cross(-s6*f6.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie12,j) += (0.25)*(-vel6a*vel3b+vel6b*vel3a)*(glm::dot(glm::cross(s6*f6.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie9,j) += (scale)*(-vel5a*vel4b+vel5b*vel4a)*(glm::dot(glm::cross(-s5*f5.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (scale)*(-vel5a*vel3b+vel5b*vel3a)*(glm::dot(glm::cross(s5*f5.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (scale)*(-vel6a*vel4b+vel6b*vel4a)*(glm::dot(glm::cross(-s6*f6.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie12,j) += (scale)*(-vel6a*vel3b+vel6b*vel3a)*(glm::dot(glm::cross(s6*f6.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
                 }
             }
         }
