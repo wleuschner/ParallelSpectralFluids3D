@@ -35,6 +35,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                         {
                             Face3D e2 = mesh.getFace(f.f[k]);
                             if(e2.inside!=GridState::INSIDE) continue;
+                            if(e2.id==e1.id) continue;
 
                             double side1 = glm::length(f.center-e1.center);
                             double side2 = glm::length(f.center-e2.center);
@@ -117,8 +118,9 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     {
                         areaPrim2 = 4*(double(mesh.resolution)/2*double(mesh.resolution)/2);
                     }
-                    //assert(abs(areaPrim-areaPrim2)<std::numeric_limits<float>::epsilon());
-                    assert(areaPrim!=0.0);
+                    areaPrim = areaPrim2;
+                    assert(abs(areaPrim-areaPrim2)<std::numeric_limits<float>::epsilon());
+                    //assert(areaPrim!=0.0);
                     if(areaPrim!=0.0)
                     {
                         const_cast<int&>(tripletList[labs(vit->e[i])-1].row())=labs(vit->e[i])-1;
@@ -188,6 +190,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
         h.setFromTriplets(tripletList.begin(),tripletList.end());
     }
 
+    h.setIdentity();
     return h;
 }
 
@@ -379,7 +382,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
 {
     Eigen::SparseMatrix<double> d;
 
-    if(dual)
+    /*if(dual)
     {
         d.resize(mesh.getNumFaces(),mesh.getNumEdges());
         d.reserve(Eigen::VectorXi::Constant(mesh.getNumEdges(),4));
@@ -417,7 +420,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
         }
         d.setFromTriplets(tripleList.begin(),tripleList.end());
     }
-    else
+    else*/
     {
         d.resize(mesh.getNumEdges(),mesh.getNumFaces());
         d.reserve(Eigen::VectorXi::Constant(mesh.getNumFaces(),4));
@@ -440,7 +443,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
     }
     if(dual)
     {
-        //return d;
+        return d;
     }
     else
     {

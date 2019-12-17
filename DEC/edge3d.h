@@ -19,10 +19,10 @@ public:
     {
         struct
         {
-            unsigned int v1;
-            unsigned int v2;
+            int v1;
+            int v2;
         };
-        unsigned int v[2];
+        int v[2];
     };
 
     union

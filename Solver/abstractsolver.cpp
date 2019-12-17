@@ -11,7 +11,7 @@ AbstractSolver::AbstractSolver()
     velocityVerts = NULL;
     mesh = NULL;
     gravityActive = false;
-    resolution = 0.2;
+    resolution = 0.5;
     nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
@@ -50,9 +50,9 @@ void AbstractSolver::setMesh(Model* mesh)
     {
         if(it->inside==GridState::INSIDE)
         {
-            indices[e] = it->v1;
+            indices[e] = decMesh.signedIdToIndex(it->v1);
             e++;
-            indices[e] = it->v2;
+            indices[e] = decMesh.signedIdToIndex(it->v2);
             e++;
         }
     }
@@ -229,9 +229,16 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
             Face3D f5 = decMesh.getFace(it->f5);
             Face3D f6 = decMesh.getFace(it->f6);
 
+            double s1 = decMesh.getFaceSignum(it->f1);
+            double s2 = decMesh.getFaceSignum(it->f2);
+            double s3 = decMesh.getFaceSignum(it->f3);
+            double s4 = decMesh.getFaceSignum(it->f4);
+            double s5 = decMesh.getFaceSignum(it->f5);
+            double s6 = decMesh.getFaceSignum(it->f6);
+
             glm::vec3 center = (f1.center+f2.center)/2.0;
-            glm::vec3 velDir = -0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal))+
-                               -0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
+            glm::vec3 velDir = 0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal))+
+                               0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
                                0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal));
 
             velVerts[e].pos = center;

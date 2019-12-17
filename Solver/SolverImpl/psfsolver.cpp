@@ -20,7 +20,7 @@ void PSFSolver::integrate()
     MICROPROFILE_SCOPEI("SolverCPU","integrate",0xFF000000);
     double e1 = 0.0;
     double e2 = 0.0;
-
+/*
     e1 = basisCoeff.dot(basisCoeff);
 
     Eigen::VectorXd vel(nEigenFunctions);
@@ -43,7 +43,7 @@ void PSFSolver::integrate()
     if(gravityActive)
     {
         basisCoeff += timeStep*gravity;
-    }
+    }*/
 
 
     velocityField = velBasisField*basisCoeff;
@@ -108,34 +108,34 @@ void PSFSolver::integrate()
             glm::vec3 cf1z = zf.center;
 
             double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
-            vel1x = -velocityField(decMesh.signedIdToIndex(v1x.f5));
-            vel3x = -velocityField(decMesh.signedIdToIndex(v1x.f6));
-            vel2x = -velocityField(decMesh.signedIdToIndex(v2x.f5));
-            vel4x = -velocityField(decMesh.signedIdToIndex(v2x.f6));
-            vel5x = -velocityField(decMesh.signedIdToIndex(v3x.f5));
-            vel7x = -velocityField(decMesh.signedIdToIndex(v3x.f6));
-            vel6x = -velocityField(decMesh.signedIdToIndex(v4x.f5));
-            vel8x = -velocityField(decMesh.signedIdToIndex(v4x.f6));
+            vel1x = decMesh.getFaceSignum(v1x.f5)*velocityField(decMesh.signedIdToIndex(v1x.f5));
+            vel3x = -decMesh.getFaceSignum(v1x.f6)*velocityField(decMesh.signedIdToIndex(v1x.f6));
+            vel2x = decMesh.getFaceSignum(v2x.f5)*velocityField(decMesh.signedIdToIndex(v2x.f5));
+            vel4x = -decMesh.getFaceSignum(v2x.f6)*velocityField(decMesh.signedIdToIndex(v2x.f6));
+            vel5x = decMesh.getFaceSignum(v3x.f5)*velocityField(decMesh.signedIdToIndex(v3x.f5));
+            vel7x = -decMesh.getFaceSignum(v3x.f6)*velocityField(decMesh.signedIdToIndex(v3x.f6));
+            vel6x = decMesh.getFaceSignum(v4x.f5)*velocityField(decMesh.signedIdToIndex(v4x.f5));
+            vel8x = -decMesh.getFaceSignum(v4x.f6)*velocityField(decMesh.signedIdToIndex(v4x.f6));
 
             double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
-            vel1y = -velocityField(decMesh.signedIdToIndex(v1y.f3));
-            vel2y = -velocityField(decMesh.signedIdToIndex(v1y.f4));
-            vel3y = -velocityField(decMesh.signedIdToIndex(v2y.f3));
-            vel4y = -velocityField(decMesh.signedIdToIndex(v2y.f4));
-            vel5y = -velocityField(decMesh.signedIdToIndex(v3y.f3));
-            vel6y = -velocityField(decMesh.signedIdToIndex(v3y.f4));
-            vel7y = -velocityField(decMesh.signedIdToIndex(v4y.f3));
-            vel8y = -velocityField(decMesh.signedIdToIndex(v4y.f4));
+            vel1y = decMesh.getFaceSignum(v1y.f3)*velocityField(decMesh.signedIdToIndex(v1y.f3));
+            vel2y = -decMesh.getFaceSignum(v1y.f4)*velocityField(decMesh.signedIdToIndex(v1y.f4));
+            vel3y = decMesh.getFaceSignum(v2y.f3)*velocityField(decMesh.signedIdToIndex(v2y.f3));
+            vel4y = -decMesh.getFaceSignum(v2y.f4)*velocityField(decMesh.signedIdToIndex(v2y.f4));
+            vel5y = decMesh.getFaceSignum(v3y.f3)*velocityField(decMesh.signedIdToIndex(v3y.f3));
+            vel6y = -decMesh.getFaceSignum(v3y.f4)*velocityField(decMesh.signedIdToIndex(v3y.f4));
+            vel7y = decMesh.getFaceSignum(v4y.f3)*velocityField(decMesh.signedIdToIndex(v4y.f3));
+            vel8y = -decMesh.getFaceSignum(v4y.f4)*velocityField(decMesh.signedIdToIndex(v4y.f4));
 
             double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
-            vel1z = velocityField(decMesh.signedIdToIndex(v1z.f1));
-            vel2z = velocityField(decMesh.signedIdToIndex(v3z.f1));
-            vel3z = velocityField(decMesh.signedIdToIndex(v2z.f1));
-            vel4z = velocityField(decMesh.signedIdToIndex(v4z.f1));
-            vel5z = velocityField(decMesh.signedIdToIndex(v1z.f2));
-            vel6z = velocityField(decMesh.signedIdToIndex(v3z.f2));
-            vel7z = velocityField(decMesh.signedIdToIndex(v2z.f2));
-            vel8z = velocityField(decMesh.signedIdToIndex(v4z.f2));
+            vel1z = decMesh.getFaceSignum(v1z.f1)*velocityField(decMesh.signedIdToIndex(v1z.f1));
+            vel2z = decMesh.getFaceSignum(v3z.f1)*velocityField(decMesh.signedIdToIndex(v3z.f1));
+            vel3z = decMesh.getFaceSignum(v2z.f1)*velocityField(decMesh.signedIdToIndex(v2z.f1));
+            vel4z = decMesh.getFaceSignum(v4z.f1)*velocityField(decMesh.signedIdToIndex(v4z.f1));
+            vel5z = -decMesh.getFaceSignum(v1z.f2)*velocityField(decMesh.signedIdToIndex(v1z.f2));
+            vel6z = -decMesh.getFaceSignum(v3z.f2)*velocityField(decMesh.signedIdToIndex(v3z.f2));
+            vel7z = -decMesh.getFaceSignum(v2z.f2)*velocityField(decMesh.signedIdToIndex(v2z.f2));
+            vel8z = -decMesh.getFaceSignum(v4z.f2)*velocityField(decMesh.signedIdToIndex(v4z.f2));
 
             glm::dvec3 particleNormalizedX;
             glm::dvec3 particleNormalizedY;
@@ -171,9 +171,17 @@ void PSFSolver::integrate()
 void PSFSolver::buildLaplace()
 {
     MICROPROFILE_SCOPEI("SolverCPU","buildLaplace",0xFF000000);
+    Eigen::SparseMatrix<double> mat2 = derivative1(decMesh,false)*derivative1(decMesh,true);
+    //std::cout<<Eigen::MatrixXd(mat2)<<std::endl;
+    //exit(1);
+
     Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
+    //std::cout<<Eigen::MatrixXd(mat)<<std::endl;
+    //exit(1);
+
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
+
     for(int k=0;k<bound.outerSize();k++)
     {
         unsigned int nVoxel=0;
@@ -192,7 +200,7 @@ void PSFSolver::buildLaplace()
     velBasisField.resize(decMesh.getNumFaces(),nEigenFunctions);
     bool decompositionDone=false;
     unsigned int foundEigenValues=0;
-    double omega = 1e-6;
+    double omega = 0.0;
     while(foundEigenValues<nEigenFunctions)
     {
         try
@@ -444,8 +452,8 @@ void PSFSolver::buildAdvection()
 
                 for(unsigned int j=0;j<nEigenFunctions;j++)
                 {
-                    assert(glm::dot(glm::cross(s1*f1.normal,-s4*f4.normal),evec1)>0.0);
-                    assert(glm::dot(glm::cross(-s1*f1.normal,s3*f3.normal),-evec3)>0.0);
+                    //assert(glm::dot(glm::cross(s1*f1.normal,-s4*f4.normal),evec1)>0.0);
+                    //assert(glm::dot(glm::cross(-s1*f1.normal,s3*f3.normal),-evec3)>0.0);
 
                     //assert(glm::dot(glm::cross(s2*f2.normal,-s4*f4.normal),evec5)>0.0);
                     //assert(glm::dot(glm::cross(-s2*f2.normal,s3*f3.normal),evec7)>0.0);

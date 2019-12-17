@@ -25,6 +25,16 @@ public:
         RIGHT
     };
 
+    enum EdgeDirection
+    {
+        POSZ,
+        NEGZ,
+        POSY,
+        NEGY,
+        POSX,
+        NEGX,
+    };
+
     DECMesh3D();
     DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize,glm::vec3 min);
 
@@ -32,6 +42,12 @@ public:
     void setEdgeInside(const Edge3D& e);
     void setFaceInside(const Face3D& f);
     void setVoxelInside(const Voxel3D& v);
+
+    int addPoint(const Vertex3D& v, unsigned x,unsigned y,unsigned z);
+    int addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsigned y,unsigned z, glm::dvec3 offset);
+    int addFace(const Face3D& f,FaceDirection direction, unsigned x,unsigned y,unsigned z);
+    void addVoxel(const Voxel3D& v, unsigned x,unsigned y,unsigned z);
+
 
     PointIterator& getPointIteratorBegin();
     EdgeIterator& getEdgeIteratorBegin();
