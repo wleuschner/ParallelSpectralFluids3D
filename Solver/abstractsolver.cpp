@@ -237,9 +237,9 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
             double s6 = decMesh.getFaceSignum(it->f6);
 
             glm::vec3 center = (f1.center+f2.center)/2.0;
-            glm::vec3 velDir = 0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal))+
+            glm::vec3 velDir = 0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal))+
                                0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
-                               0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal));
+                               0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal));
 
             velVerts[e].pos = center;
             e++;

@@ -45,6 +45,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                         }
                     }
                     areaPrim/=2;
+
                     /*if(f.f1!=0 && f.f2!=0)
                     {
                         Face3D e1 = mesh.getFace(f.f1);
@@ -118,14 +119,13 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     {
                         areaPrim2 = 4*(double(mesh.resolution)/2*double(mesh.resolution)/2);
                     }
-                    areaPrim = areaPrim2;
                     assert(abs(areaPrim-areaPrim2)<std::numeric_limits<float>::epsilon());
-                    //assert(areaPrim!=0.0);
+                    assert(areaPrim!=0.0);
                     if(areaPrim!=0.0)
                     {
                         const_cast<int&>(tripletList[labs(vit->e[i])-1].row())=labs(vit->e[i])-1;
                         const_cast<int&>(tripletList[labs(vit->e[i])-1].col())=labs(vit->e[i])-1;
-                        const_cast<double&>(tripletList[labs(vit->e[i])-1].value())+=glm::length(vit->center-f.center)/areaPrim;
+                        const_cast<double&>(tripletList[labs(vit->e[i])-1].value())=(glm::length((vit->center-f.center))/areaPrim);
                     }
                     else {
                        std::cout<<f.id<<" "<<f.f1<<" "<<f.f2<<" "<<f.f3<<" "<<f.f4<<std::endl;
@@ -183,8 +183,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     assert(areaPrim!=0.0);
                     const_cast<int&>(tripletList[labs(vit->f[i])-1].row())=labs(vit->f[i])-1;
                     const_cast<int&>(tripletList[labs(vit->f[i])-1].col())=labs(vit->f[i])-1;
-                    const_cast<double&>(tripletList[labs(vit->f[i])-1].value())+=glm::length(vit->center-f.center)/areaPrim;
-
+                    const_cast<double&>(tripletList[labs(vit->f[i])-1].value())=((glm::length(vit->center-f.center))/areaPrim);
                 }
         }
         h.setFromTriplets(tripletList.begin(),tripletList.end());
@@ -211,7 +210,6 @@ Eigen::SparseMatrix<double> hodge1(DECMesh3D& mesh,bool dual)
 
             std::vector<Eigen::Triplet<double>> tripletList;
             tripletList.resize(mesh.getNumEdges());
-
 
             if(dual)
             {
@@ -382,61 +380,64 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
 {
     Eigen::SparseMatrix<double> d;
 
-    /*if(dual)
+    //if(dual)
     {
-        d.resize(mesh.getNumFaces(),mesh.getNumEdges());
-        d.reserve(Eigen::VectorXi::Constant(mesh.getNumEdges(),4));
+        /*d.resize(mesh.getNumEdges(),mesh.getNumFaces());
+        d.reserve(Eigen::VectorXi::Constant(mesh.getNumFaces(),4));
         std::vector<Eigen::Triplet<double>> tripleList;
-        tripleList.resize(mesh.getNumEdges()*4);
-        Edge3D* faces = mesh.getEdges();
+        tripleList.resize(mesh.getNumFaces()*4);
+        Face3D* faces = mesh.getFaces();
         //#pragma omp parallel for
-        for(int i=0;i<mesh.getNumEdges();i++)
+        for(int i=0;i<mesh.getNumFaces();i++)
         {
-            Edge3D* face = &faces[i];
-            if(face->inside==GridState::INSIDE)
+            Face3D* face = &faces[i];
+            if(face->inside == GridState::INSIDE)
             {
-
-                if(face->f1!=0)
-                {
-                   Face3D f = mesh.getFace(face->f1);
-                   tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->f1),mesh.getEdgeIndex(*face),face->f1>=0?1:-1);
-                }
-                if(face->f2!=0)
-                {
-                   Face3D f = mesh.getFace(face->f2);
-                   tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->f2),mesh.getEdgeIndex(*face),face->f2>=0?1:-1);
-                }
-                if(face->f3!=0)
-                {
-                   Face3D f = mesh.getFace(face->f3);
-                   tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->f3),mesh.getEdgeIndex(*face),face->f3>=0?1:-1);
-                }
-                if(face->f4!=0)
-                {
-                   Face3D f = mesh.getFace(face->f4);
-                   tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->f4),mesh.getEdgeIndex(*face),face->f4>=0?1:-1);
-                }
+                tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),(face->e1>=0?1:-1));
+                tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),(face->e2>=0?1:-1));
+                tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e3),mesh.getFaceIndex(*face),(face->e3>=0?1:-1));
+                tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e4),mesh.getFaceIndex(*face),(face->e4>=0?1:-1));
             }
         }
-        d.setFromTriplets(tripleList.begin(),tripleList.end());
+        d.setFromTriplets(tripleList.begin(),tripleList.end());*/
     }
-    else*/
+    //else
     {
         d.resize(mesh.getNumEdges(),mesh.getNumFaces());
         d.reserve(Eigen::VectorXi::Constant(mesh.getNumFaces(),4));
         std::vector<Eigen::Triplet<double>> tripleList;
         tripleList.resize(mesh.getNumFaces()*4);
         Face3D* faces = mesh.getFaces();
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(int i=0;i<mesh.getNumFaces();i++)
         {
             Face3D* face = &faces[i];
             if(face->inside == GridState::INSIDE)
             {
-                tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),face->e1>=0?1:-1);
-                tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),face->e2>=0?1:-1);
-                tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e3),mesh.getFaceIndex(*face),face->e3>=0?1:-1);
-                tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e4),mesh.getFaceIndex(*face),face->e4>=0?1:-1);
+                tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),(face->e1>=0?1:1));
+                tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),(face->e2>=0?1:1));
+                tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e3),mesh.getFaceIndex(*face),(face->e3>=0?1:1));
+                tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e4),mesh.getFaceIndex(*face),(face->e4>=0?1:1));
+            }
+        }
+
+
+        Voxel3D* voxels = mesh.getVoxels();
+        for(unsigned int k=0;k<mesh.getNumVoxels();k++)
+        {
+            Voxel3D* voxel = &voxels[k];
+            for(int i=0;i<6;i++)
+            {
+                Face3D face2 = mesh.getFace(voxel->f[i]);
+                Face3D* face = &face2;
+                double fs = mesh.getFaceSignum(voxel->f[i]);
+                if(face->inside == GridState::INSIDE)
+                {
+                    const_cast<double&>(tripleList[face->id*4].value()) *= fs;
+                    const_cast<double&>(tripleList[face->id*4+1].value()) *= fs;
+                    const_cast<double&>(tripleList[face->id*4+2].value()) *= fs;
+                    const_cast<double&>(tripleList[face->id*4+3].value()) *= fs;
+                }
             }
         }
         d.setFromTriplets(tripleList.begin(),tripleList.end());

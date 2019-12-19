@@ -15,6 +15,8 @@ public:
     glm::dvec3 center;
     glm::dvec3 normal;
 
+    double signum;
+
     union
     {
         struct

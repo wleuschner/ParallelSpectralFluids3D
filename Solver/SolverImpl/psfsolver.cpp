@@ -20,10 +20,10 @@ void PSFSolver::integrate()
     MICROPROFILE_SCOPEI("SolverCPU","integrate",0xFF000000);
     double e1 = 0.0;
     double e2 = 0.0;
-/*
+
     e1 = basisCoeff.dot(basisCoeff);
 
-    Eigen::VectorXd vel(nEigenFunctions);
+    /*Eigen::VectorXd vel(nEigenFunctions);
     #pragma omp parallel for
     for(unsigned int k=0;k<nEigenFunctions;k++)
     {
@@ -43,8 +43,8 @@ void PSFSolver::integrate()
     if(gravityActive)
     {
         basisCoeff += timeStep*gravity;
-    }*/
-
+    }
+*/
 
     velocityField = velBasisField*basisCoeff;
 
@@ -108,24 +108,24 @@ void PSFSolver::integrate()
             glm::vec3 cf1z = zf.center;
 
             double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
-            vel1x = decMesh.getFaceSignum(v1x.f5)*velocityField(decMesh.signedIdToIndex(v1x.f5));
-            vel3x = -decMesh.getFaceSignum(v1x.f6)*velocityField(decMesh.signedIdToIndex(v1x.f6));
-            vel2x = decMesh.getFaceSignum(v2x.f5)*velocityField(decMesh.signedIdToIndex(v2x.f5));
-            vel4x = -decMesh.getFaceSignum(v2x.f6)*velocityField(decMesh.signedIdToIndex(v2x.f6));
-            vel5x = decMesh.getFaceSignum(v3x.f5)*velocityField(decMesh.signedIdToIndex(v3x.f5));
-            vel7x = -decMesh.getFaceSignum(v3x.f6)*velocityField(decMesh.signedIdToIndex(v3x.f6));
-            vel6x = decMesh.getFaceSignum(v4x.f5)*velocityField(decMesh.signedIdToIndex(v4x.f5));
-            vel8x = -decMesh.getFaceSignum(v4x.f6)*velocityField(decMesh.signedIdToIndex(v4x.f6));
+            vel1x = -decMesh.getFaceSignum(v1x.f5)*velocityField(decMesh.signedIdToIndex(v1x.f5));
+            vel3x = decMesh.getFaceSignum(v1x.f6)*velocityField(decMesh.signedIdToIndex(v1x.f6));
+            vel2x = -decMesh.getFaceSignum(v2x.f5)*velocityField(decMesh.signedIdToIndex(v2x.f5));
+            vel4x = decMesh.getFaceSignum(v2x.f6)*velocityField(decMesh.signedIdToIndex(v2x.f6));
+            vel5x = -decMesh.getFaceSignum(v3x.f5)*velocityField(decMesh.signedIdToIndex(v3x.f5));
+            vel7x = decMesh.getFaceSignum(v3x.f6)*velocityField(decMesh.signedIdToIndex(v3x.f6));
+            vel6x = -decMesh.getFaceSignum(v4x.f5)*velocityField(decMesh.signedIdToIndex(v4x.f5));
+            vel8x = decMesh.getFaceSignum(v4x.f6)*velocityField(decMesh.signedIdToIndex(v4x.f6));
 
             double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
-            vel1y = decMesh.getFaceSignum(v1y.f3)*velocityField(decMesh.signedIdToIndex(v1y.f3));
-            vel2y = -decMesh.getFaceSignum(v1y.f4)*velocityField(decMesh.signedIdToIndex(v1y.f4));
-            vel3y = decMesh.getFaceSignum(v2y.f3)*velocityField(decMesh.signedIdToIndex(v2y.f3));
-            vel4y = -decMesh.getFaceSignum(v2y.f4)*velocityField(decMesh.signedIdToIndex(v2y.f4));
-            vel5y = decMesh.getFaceSignum(v3y.f3)*velocityField(decMesh.signedIdToIndex(v3y.f3));
-            vel6y = -decMesh.getFaceSignum(v3y.f4)*velocityField(decMesh.signedIdToIndex(v3y.f4));
-            vel7y = decMesh.getFaceSignum(v4y.f3)*velocityField(decMesh.signedIdToIndex(v4y.f3));
-            vel8y = -decMesh.getFaceSignum(v4y.f4)*velocityField(decMesh.signedIdToIndex(v4y.f4));
+            vel1y = -decMesh.getFaceSignum(v1y.f3)*velocityField(decMesh.signedIdToIndex(v1y.f3));
+            vel2y = decMesh.getFaceSignum(v1y.f4)*velocityField(decMesh.signedIdToIndex(v1y.f4));
+            vel3y = -decMesh.getFaceSignum(v2y.f3)*velocityField(decMesh.signedIdToIndex(v2y.f3));
+            vel4y = decMesh.getFaceSignum(v2y.f4)*velocityField(decMesh.signedIdToIndex(v2y.f4));
+            vel5y = -decMesh.getFaceSignum(v3y.f3)*velocityField(decMesh.signedIdToIndex(v3y.f3));
+            vel6y = decMesh.getFaceSignum(v3y.f4)*velocityField(decMesh.signedIdToIndex(v3y.f4));
+            vel7y = -decMesh.getFaceSignum(v4y.f3)*velocityField(decMesh.signedIdToIndex(v4y.f3));
+            vel8y = decMesh.getFaceSignum(v4y.f4)*velocityField(decMesh.signedIdToIndex(v4y.f4));
 
             double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
             vel1z = decMesh.getFaceSignum(v1z.f1)*velocityField(decMesh.signedIdToIndex(v1z.f1));
@@ -171,9 +171,13 @@ void PSFSolver::integrate()
 void PSFSolver::buildLaplace()
 {
     MICROPROFILE_SCOPEI("SolverCPU","buildLaplace",0xFF000000);
-    Eigen::SparseMatrix<double> mat2 = derivative1(decMesh,false)*derivative1(decMesh,true);
-    //std::cout<<Eigen::MatrixXd(mat2)<<std::endl;
-    //exit(1);
+    //Eigen::SparseMatrix<double> mat2 = derivative1(decMesh,false)*derivative1(decMesh,true);
+    //std::cout<<Eigen::MatrixXd(derivative1(decMesh,true))<<std::endl;
+
+    Eigen::SparseMatrix<double> mat3 = hodge2(decMesh,true);
+    Eigen::SparseMatrix<double> mat4 = hodge2(decMesh,false);
+    //std::cout<<Eigen::MatrixXd(mat3)<<std::endl;
+    //std::cout<<Eigen::MatrixXd(mat4)<<std::endl;
 
     Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     //std::cout<<Eigen::MatrixXd(mat)<<std::endl;
@@ -320,7 +324,7 @@ void PSFSolver::buildLaplace()
     }
     setInitialVorticityField(vorticityField);
 
-
+/*
     velocityField = Eigen::VectorXd::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
     for(FaceIterator it=decMesh.getFaceIteratorBegin();it!=decMesh.getFaceIteratorEnd();it++)
@@ -330,14 +334,14 @@ void PSFSolver::buildLaplace()
             if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
             {
                 AABB aabb = mesh->getAABB();
-                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))&&
+                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))
                    it->center.y<aabb.min.y+0.4)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?1:-1)*1.0;
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?1:-1)*10.0;
 
             }
         }
-    }
-    setInitialVelocityField(velocityField);
+    }*/
+    //setInitialVelocityField(velocityField);
 }
 
 void PSFSolver::buildAdvection()
@@ -472,20 +476,20 @@ void PSFSolver::buildAdvection()
                     //assert(glm::dot(evec1,se4*glm::cross(-s1*f1.normal,s5*f5.normal))>0.0);
 
 
-                    wedges[i](ie1,j) += (scale)*(-vel1a*vel4b+vel1b*vel4a)*(glm::dot(glm::cross(-s1*f1.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie2,j) += (scale)*(-vel1a*vel6b+vel1b*vel6a)*(glm::dot(glm::cross(s1*f1.normal,-s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie3,j) += (scale)*(-vel1a*vel3b+vel1b*vel3a)*(glm::dot(glm::cross(s1*f1.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie4,j) += (scale)*(-vel1a*vel5b+vel1b*vel5a)*(glm::dot(glm::cross(-s1*f1.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie1,j) += (scale)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(s1*f1.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (scale)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(s1*f1.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (scale)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(s1*f1.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie4,j) += (scale)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(s1*f1.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie5,j) += (scale)*(-vel2a*vel4b+vel2b*vel4a)*(glm::dot(glm::cross(s2*f2.normal,-s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie6,j) += (scale)*(-vel2a*vel5b+vel2b*vel5a)*(glm::dot(glm::cross(s2*f2.normal,-s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie7,j) += (scale)*(-vel2a*vel3b+vel2b*vel3a)*(glm::dot(glm::cross(-s2*f2.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie8,j) += (scale)*(-vel2a*vel6b+vel2b*vel6a)*(glm::dot(glm::cross(-s2*f2.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie5,j) += (scale)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(s2*f2.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (scale)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(s2*f2.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie7,j) += (scale)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(s2*f2.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie8,j) += (scale)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(s2*f2.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie9,j) += (scale)*(-vel5a*vel4b+vel5b*vel4a)*(glm::dot(glm::cross(-s5*f5.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie10,j) += (scale)*(-vel5a*vel3b+vel5b*vel3a)*(glm::dot(glm::cross(s5*f5.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie11,j) += (scale)*(-vel6a*vel4b+vel6b*vel4a)*(glm::dot(glm::cross(-s6*f6.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie12,j) += (scale)*(-vel6a*vel3b+vel6b*vel3a)*(glm::dot(glm::cross(s6*f6.normal,-s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie9,j) += (scale)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(s5*f5.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (scale)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(s5*f5.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (scale)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(s6*f6.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie12,j) += (scale)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(s6*f6.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
                 }
             }
         }
