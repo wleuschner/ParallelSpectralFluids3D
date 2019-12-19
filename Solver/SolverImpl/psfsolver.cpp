@@ -23,7 +23,7 @@ void PSFSolver::integrate()
 
     e1 = basisCoeff.dot(basisCoeff);
 
-    /*Eigen::VectorXd vel(nEigenFunctions);
+    Eigen::VectorXd vel(nEigenFunctions);
     #pragma omp parallel for
     for(unsigned int k=0;k<nEigenFunctions;k++)
     {
@@ -44,7 +44,7 @@ void PSFSolver::integrate()
     {
         basisCoeff += timeStep*gravity;
     }
-*/
+
 
     velocityField = velBasisField*basisCoeff;
 
@@ -213,7 +213,7 @@ void PSFSolver::buildLaplace()
             Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
-            int nconv = solver.compute();//solver.compute(1000,1e-6,Spectra::WHICH_LM);
+            int nconv = solver.compute(1000,1e-6,Spectra::WHICH_LM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
 
@@ -222,7 +222,7 @@ void PSFSolver::buildLaplace()
                 bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
-                    //if(std::abs(tempEigenValues(i))>0.0)
+                    if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
                         bool doubleEv = false;
                         for(unsigned int j=0;j<foundEigenValues;j++)
@@ -279,7 +279,7 @@ void PSFSolver::buildLaplace()
             {
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)))
                 {
-                    gravity(decMesh.getFaceIndex(*it)) = -(it->normal.y>0?1:-1)*0.00981;
+                    gravity(decMesh.getFaceIndex(*it)) = -(it->normal.y>0?-1:1)*0.00981;
                 }
             }
         }
@@ -308,7 +308,7 @@ void PSFSolver::buildLaplace()
                 if((p1.x>=0.0&&p1.x<=0.0&&p1.y==0.0&&p2.x>=0.0&&p2.x<=0.0&&p2.y==0.0))
                 {
 
-                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*10;
+                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*1;
                 }
                 //if((p1.x>=0.5&&p1.x<=0.7&&p1.y==0.0&&p2.x>=0.5&&p2.x<=0.7&&p2.y==0.0))
                 //{
@@ -324,7 +324,6 @@ void PSFSolver::buildLaplace()
     }
     setInitialVorticityField(vorticityField);
 
-/*
     velocityField = Eigen::VectorXd::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
     for(FaceIterator it=decMesh.getFaceIteratorBegin();it!=decMesh.getFaceIteratorEnd();it++)
@@ -334,13 +333,13 @@ void PSFSolver::buildLaplace()
             if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
             {
                 AABB aabb = mesh->getAABB();
-                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))
+                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
                    it->center.y<aabb.min.y+0.4)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?1:-1)*10.0;
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*10.0;
 
             }
         }
-    }*/
+    }
     //setInitialVelocityField(velocityField);
 }
 
@@ -476,20 +475,20 @@ void PSFSolver::buildAdvection()
                     //assert(glm::dot(evec1,se4*glm::cross(-s1*f1.normal,s5*f5.normal))>0.0);
 
 
-                    wedges[i](ie1,j) += (scale)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(s1*f1.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie2,j) += (scale)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(s1*f1.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie3,j) += (scale)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(s1*f1.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie4,j) += (scale)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(s1*f1.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie1,j) += (scale)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(-f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (scale)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,-f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (scale)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(f1.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie4,j) += (scale)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(-f1.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie5,j) += (scale)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(s2*f2.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie6,j) += (scale)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(s2*f2.normal,s5*f5.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie7,j) += (scale)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(s2*f2.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie8,j) += (scale)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(s2*f2.normal,s6*f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie5,j) += (scale)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(-f2.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (scale)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(f2.normal,-f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie7,j) += (scale)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(f2.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie8,j) += (scale)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(-f2.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie9,j) += (scale)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(s5*f5.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie10,j) += (scale)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(s5*f5.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie11,j) += (scale)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(s6*f6.normal,s4*f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie12,j) += (scale)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(s6*f6.normal,s3*f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie9,j) += (scale)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(-f5.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (scale)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(f5.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (scale)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(-f6.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie12,j) += (scale)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(f6.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
                 }
             }
         }

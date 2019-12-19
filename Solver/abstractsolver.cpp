@@ -11,7 +11,7 @@ AbstractSolver::AbstractSolver()
     velocityVerts = NULL;
     mesh = NULL;
     gravityActive = false;
-    resolution = 0.5;
+    resolution = 0.2;
     nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
@@ -237,13 +237,13 @@ void AbstractSolver::drawVelocity(ShaderProgram* program,const glm::mat4& pvm)
             double s6 = decMesh.getFaceSignum(it->f6);
 
             glm::vec3 center = (f1.center+f2.center)/2.0;
-            glm::vec3 velDir = 0.5f*glm::vec3((velocityField(f5.id)*f5.normal+velocityField(f6.id)*f6.normal))+
-                               0.5f*glm::vec3((velocityField(f3.id)*f3.normal+velocityField(f4.id)*f4.normal))+
-                               0.5f*glm::vec3((velocityField(f1.id)*f1.normal+velocityField(f2.id)*f2.normal));
+            glm::vec3 velDir = 0.5f*glm::vec3((s5*velocityField(f5.id)*f5.normal-s6*velocityField(f6.id)*f6.normal))+
+                               0.5f*glm::vec3((s3*velocityField(f3.id)*f3.normal-s4*velocityField(f4.id)*f4.normal))+
+                               0.5f*glm::vec3((s1*velocityField(f1.id)*f1.normal-s2*velocityField(f2.id)*f2.normal));
 
             velVerts[e].pos = center;
             e++;
-            velVerts[e].pos = center+velDir*5.0f;
+            velVerts[e].pos = center+velDir;
             e++;
         }
     }

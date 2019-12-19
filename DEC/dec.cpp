@@ -414,14 +414,14 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
             Face3D* face = &faces[i];
             if(face->inside == GridState::INSIDE)
             {
-                tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),(face->e1>=0?1:1));
-                tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),(face->e2>=0?1:1));
-                tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e3),mesh.getFaceIndex(*face),(face->e3>=0?1:1));
-                tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e4),mesh.getFaceIndex(*face),(face->e4>=0?1:1));
+                tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),(face->e1>=0?1:-1));
+                tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),(face->e2>=0?1:-1));
+                tripleList[i*4+2] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e3),mesh.getFaceIndex(*face),(face->e3>=0?1:-1));
+                tripleList[i*4+3] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e4),mesh.getFaceIndex(*face),(face->e4>=0?1:-1));
             }
         }
 
-
+/*
         Voxel3D* voxels = mesh.getVoxels();
         for(unsigned int k=0;k<mesh.getNumVoxels();k++)
         {
@@ -439,7 +439,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
                     const_cast<double&>(tripleList[face->id*4+3].value()) *= fs;
                 }
             }
-        }
+        }*/
         d.setFromTriplets(tripleList.begin(),tripleList.end());
     }
     if(dual)

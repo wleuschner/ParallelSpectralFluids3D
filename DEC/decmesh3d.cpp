@@ -1050,9 +1050,9 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid<numZEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(0.0,0.0,resolution);
             edges[eid].v1 = indexToSignedId(getPointIndex(x,y,z+1),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),-1);
-            addPoint(Vertex3D(edges[eid].v1,e.inside),x,y,z);
-            addPoint(Vertex3D(edges[eid].v2,e.inside),x,y,z+1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),1);
+            addPoint(Vertex3D(edges[eid].v1,e.inside),x,y,z+1);
+            addPoint(Vertex3D(edges[eid].v2,e.inside),x,y,z);
 
             points[getPointIndex(x,y,z+1)].e[points[getPointIndex(x,y,z+1)].numDual] = indexToSignedId(eid,1);
             points[getPointIndex(x,y,z)].e[points[getPointIndex(x,y,z)].numDual] = indexToSignedId(eid,1);
@@ -1067,7 +1067,7 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid<numZEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(0.0,0.0,resolution);
             edges[eid].v1 = indexToSignedId(getPointIndex(x,y,z),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z+1),-1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z+1),1);
             addPoint(Vertex3D(edges[eid].v1,e.inside),x,y,z);
             addPoint(Vertex3D(edges[eid].v2,e.inside),x,y,z+1);
 
@@ -1084,7 +1084,7 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid>=numZEdges && eid<numZEdges+numYEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(0.0,resolution,0.0);
             edges[eid].v1 = indexToSignedId(getPointIndex(x,y+1,z),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),-1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),1);
             addPoint(Vertex3D(edges[eid].v1,e.inside),x,y+1,z);
             addPoint(Vertex3D(edges[eid].v2,e.inside),x,y,z);
 
@@ -1100,7 +1100,7 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid>=numZEdges && eid<numZEdges+numYEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(0.0,resolution,0.0);
             edges[eid].v1 = indexToSignedId(getPointIndex(x,y,z),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x,y+1,z),-1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x,y+1,z),1);
             addPoint(Vertex3D(edges[eid].v1,e.inside),x,y,z);
             addPoint(Vertex3D(edges[eid].v2,e.inside),x,y+1,z);
 
@@ -1116,7 +1116,7 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid>=numXEdges+numYEdges && eid<numXEdges+numYEdges+numXEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(resolution,0.0,0.0);
             edges[eid].v1 = indexToSignedId(getPointIndex(x+1,y,z),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),-1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x,y,z),1);
             addPoint(Vertex3D(edges[eid].v1,e.inside),x+1,y,z);
             addPoint(Vertex3D(edges[eid].v2,e.inside),x,y,z);
 
@@ -1132,7 +1132,7 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
             assert(eid>=numXEdges+numYEdges && eid<numXEdges+numYEdges+numXEdges);
             edges[eid].center = offset;//+glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(resolution,0.0,0.0);
             edges[eid].v1 = indexToSignedId(getPointIndex(x,y,z),1);
-            edges[eid].v2 = indexToSignedId(getPointIndex(x+1,y,z),-1);
+            edges[eid].v2 = indexToSignedId(getPointIndex(x+1,y,z),1);
             addPoint(Vertex3D(edges[eid].v1,e.inside),x,y,z);
             addPoint(Vertex3D(edges[eid].v2,e.inside),x+1,y,z);
 
@@ -1152,42 +1152,42 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
         {
             assert(eid<numZEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x,y,z+1),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),1))
                 return 1;
         }
         else if(direction==EdgeDirection::POSZ)
         {
             assert(eid<numZEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x,y,z),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z+1),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z+1),1))
                 return 1;
         }
         else if(direction==EdgeDirection::NEGY)
         {
             assert(eid>=numZEdges && eid<numZEdges+numYEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x,y+1,z),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),1))
                 return 1;
         }
         else if(direction==EdgeDirection::POSY)
         {
             assert(eid>=numZEdges && eid<numZEdges+numYEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x,y,z),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x,y+1,z),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x,y+1,z),1))
                 return 1;
         }
         else if(direction==EdgeDirection::NEGX)
         {
             assert(eid>=numXEdges+numYEdges && eid<numXEdges+numYEdges+numXEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x+1,y,z),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x,y,z),1))
                 return 1;
         }
         else if(direction==EdgeDirection::POSX)
         {
             assert(eid>=numXEdges+numYEdges && eid<numXEdges+numYEdges+numXEdges);
             if(edges[eid].v1 == indexToSignedId(getPointIndex(x,y,z),1) &&
-            edges[eid].v2 == indexToSignedId(getPointIndex(x+1,y,z),-1))
+            edges[eid].v2 == indexToSignedId(getPointIndex(x+1,y,z),1))
                 return 1;
         }
         return -1;
@@ -1424,7 +1424,7 @@ bool DECMesh3D::checkInternalState()
                 Face3D f2 = getFace(v.f[j+2]);
                 double s2 = getFaceSignum(v.f[j+2]);
                 glm::dvec3 cross1 = glm::cross(s2*f2.normal,s1*f1.normal);
-                //assert(glm::dot(cross1,glm::dvec3(1.0,0.0,0.0))>0.0);
+                assert(glm::dot(cross1,glm::dvec3(1.0,0.0,0.0))>0.0);
             }
         }
 
@@ -1437,7 +1437,7 @@ bool DECMesh3D::checkInternalState()
                 Face3D f2 = getFace(v.f[j+4]);
                 double s2 = getFaceSignum(v.f[j+4]);
                 glm::dvec3 cross1 = glm::cross(s2*f2.normal,s1*f1.normal);
-                //assert(glm::dot(cross1,glm::dvec3(0.0,0.0,1.0))>0.0);
+                assert(glm::dot(cross1,glm::dvec3(0.0,0.0,1.0))>0.0);
             }
         }
 
@@ -1450,7 +1450,7 @@ bool DECMesh3D::checkInternalState()
                 Face3D f2 = getFace(v.f[j+0]);
                 double s2 = getFaceSignum(v.f[j+0]);
                 glm::dvec3 cross1 = glm::cross(s2*f2.normal,s1*f1.normal);
-                //assert(glm::dot(cross1,glm::dvec3(0.0,1.0,0.0))>0.0);
+                assert(glm::dot(cross1,glm::dvec3(0.0,1.0,0.0))>0.0);
             }
         }
 
@@ -1479,14 +1479,14 @@ bool DECMesh3D::checkInternalState()
                 double e2v1s = getPointSignum(e2.v1);
                 double e2v2s = getPointSignum(e2.v2);
 
-                glm::dvec3 evec1 = glm::dvec3(e1v2s*e1v2.center+e1v1s*e1v1.center);
-                glm::dvec3 evec2 = glm::dvec3(e2v2s*e2v2.center+e2v1s*e2v1.center);
+                glm::dvec3 evec1 = glm::dvec3(e1v2s*e1v2.center-e1v1s*e1v1.center);
+                glm::dvec3 evec2 = glm::dvec3(e2v2s*e2v2.center-e2v1s*e2v1.center);
 
                 double s1 = getFaceSignum(f.e[(j+0)%4]);
                 double s2 = getFaceSignum(f.e[(j+1)%4]);
 
                 glm::dvec3 cross1 = glm::normalize(glm::cross(s2*evec2,s1*evec1));
-                //assert(glm::dot(f.normal,cross1)>0.0);
+                assert(glm::dot(f.normal,cross1)>0.0);
 
             }
         }
