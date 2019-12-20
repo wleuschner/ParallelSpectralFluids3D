@@ -6,16 +6,50 @@
 #include <fstream>
 #include <string>
 #include <CL/cl_gl.h>
+#include <GL/glx.h>
 #include "../../Spectra/MatOp/SparseSymShiftSolve.h"
 #include "../../Spectra/SymEigsShiftSolver.h"
 #include "../../DEC/dec.h"
 
 PSFSolverGPU::PSFSolverGPU() : AbstractSolver()
 {
+    Display* display = glXGetCurrentDisplay();
+    GLXContext gl_context = glXGetCurrentContext();
+
+    // Get platform and device information
+    cl_platform_id platform_id = NULL;
+    cl_device_id device_id = NULL;
+    cl_uint ret_num_devices;
+    cl_uint ret_num_platforms;
+    cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
+    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_GPU, 1,
+            &device_id, &ret_num_devices);
+
+    cl_context_properties props[] = {
+        CL_CONTEXT_PLATFORM,(cl_context_properties) platform_id,
+        CL_GLX_DISPLAY_KHR,(cl_context_properties) display,
+        CL_GL_CONTEXT_KHR,(cl_context_properties) gl_context,
+        0
+    };
+
+    cl_context_id = clCreateContext(props,1,&device_id,0,0,&ret);
+
+    cl_command_queue queue = clCreateCommandQueue(cl_context_id,device_id,0,0);
+
+    viennacl::ocl::setup_context(0,cl_context_id,device_id,queue);
+
+    std::ifstream f("Resources/Simulation/simulation.cl");
+    std::string source((std::istreambuf_iterator<char>(f)),
+                     std::istreambuf_iterator<char>());
+
+//    cl_mem particlesBuffer = clCreateFromGLBuffer(viennacl::ocl::current_context(),CL_MEM_READ_WRITE,particleVerts->id);
+    viennacl::ocl::program& vcl_prog_psf = viennacl::ocl::current_context().add_program(source.data(),"advection");
+    viennacl::ocl::kernel& advection_kernel = vcl_prog_psf.get_kernel("advection");
 }
 
 void PSFSolverGPU::integrate()
 {
+
     viennacl::scalar<double> e1 = 0.0;
     viennacl::scalar<double> e2 = 0.0;
 
@@ -46,14 +80,6 @@ void PSFSolverGPU::integrate()
 
 void PSFSolverGPU::buildLaplace()
 {
-    std::ifstream f("Resources/Simulation/simulation.cl");
-    std::string source((std::istreambuf_iterator<char>(f)),
-                     std::istreambuf_iterator<char>());
-
-//    cl_mem particlesBuffer = clCreateFromGLBuffer(viennacl::ocl::current_context(),CL_MEM_READ_WRITE,particleVerts->id);
-    viennacl::ocl::program& vcl_prog_psf = viennacl::ocl::current_context().add_program(source.data(),"advection");
-    viennacl::ocl::kernel& advection_kernel = vcl_prog_psf.get_kernel("advection");
-
     Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
@@ -238,18 +264,18 @@ void PSFSolverGPU::buildAdvection()
             Face3D f5 = decMesh.getFace(fit->f5);
             Face3D f6 = decMesh.getFace(fit->f6);
 
-            unsigned int ie1 = f1.e1;
-            unsigned int ie2 = f1.e2;
-            unsigned int ie3 = f1.e3;
-            unsigned int ie4 = f1.e4;
-            unsigned int ie5 = f2.e1;
-            unsigned int ie6 = f2.e2;
-            unsigned int ie7 = f2.e3;
-            unsigned int ie8 = f2.e4;
-            unsigned int ie9 = f5.e1;
-            unsigned int ie10 = f5.e3;
-            unsigned int ie11 = f6.e1;
-            unsigned int ie12 = f6.e3;
+            unsigned int ie1 = decMesh.signedIdToIndex(f1.e1);
+            unsigned int ie2 = decMesh.signedIdToIndex(f1.e2);
+            unsigned int ie3 = decMesh.signedIdToIndex(f1.e3);
+            unsigned int ie4 = decMesh.signedIdToIndex(f1.e4);
+            unsigned int ie5 = decMesh.signedIdToIndex(f2.e1);
+            unsigned int ie6 = decMesh.signedIdToIndex(f2.e2);
+            unsigned int ie7 = decMesh.signedIdToIndex(f2.e3);
+            unsigned int ie8 = decMesh.signedIdToIndex(f2.e4);
+            unsigned int ie9 = decMesh.signedIdToIndex(f5.e1);
+            unsigned int ie10 = decMesh.signedIdToIndex(f5.e3);
+            unsigned int ie11 = decMesh.signedIdToIndex(f6.e1);
+            unsigned int ie12 = decMesh.signedIdToIndex(f6.e3);
 
             double s1 = decMesh.getFaceSignum(fit->f1);
             double s2 = decMesh.getFaceSignum(fit->f2);
@@ -260,21 +286,21 @@ void PSFSolverGPU::buildAdvection()
 
             for(unsigned int i=0;i<nEigenFunctions;i++)
             {
-                double vel1a = velBasisField(fit->f1,i);
-                double vel2a = velBasisField(fit->f2,i);
-                double vel3a = velBasisField(fit->f3,i);
-                double vel4a = velBasisField(fit->f4,i);
-                double vel5a = velBasisField(fit->f5,i);
-                double vel6a = velBasisField(fit->f6,i);
+                double vel1a = s1*velBasisField(labs(fit->f1)-1,i);
+                double vel2a = s2*velBasisField(labs(fit->f2)-1,i);
+                double vel3a = s3*velBasisField(labs(fit->f3)-1,i);
+                double vel4a = s4*velBasisField(labs(fit->f4)-1,i);
+                double vel5a = s5*velBasisField(labs(fit->f5)-1,i);
+                double vel6a = s6*velBasisField(labs(fit->f6)-1,i);
 
                 for(unsigned int j=0;j<nEigenFunctions;j++)
                 {
-                    double vel1b = velBasisField(fit->f1,j);
-                    double vel2b = velBasisField(fit->f2,j);
-                    double vel3b = velBasisField(fit->f3,j);
-                    double vel4b = velBasisField(fit->f4,j);
-                    double vel5b = velBasisField(fit->f5,j);
-                    double vel6b = velBasisField(fit->f6,j);
+                    double vel1b = s1*velBasisField(labs(fit->f1)-1,j);
+                    double vel2b = s2*velBasisField(labs(fit->f2)-1,j);
+                    double vel3b = s3*velBasisField(labs(fit->f3)-1,j);
+                    double vel4b = s4*velBasisField(labs(fit->f4)-1,j);
+                    double vel5b = s5*velBasisField(labs(fit->f5)-1,j);
+                    double vel6b = s6*velBasisField(labs(fit->f6)-1,j);
 
                     wedges[i](ie1,j) += (0.25)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
                     wedges[i](ie2,j) += (0.25)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));

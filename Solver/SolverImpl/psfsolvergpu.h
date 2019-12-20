@@ -4,6 +4,7 @@
 #include <viennacl/vector.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/compressed_matrix.hpp>
+#include <CL/cl.h>
 
 class PSFSolverGPU : public AbstractSolver
 {
@@ -14,6 +15,8 @@ protected:
     void buildLaplace();
     void buildAdvection();
 private:
+    cl_context cl_context_id;
+
     viennacl::compressed_matrix<double> vcl_curl;
 
     std::vector<viennacl::vector<double>> vcl_eigenFunctions;

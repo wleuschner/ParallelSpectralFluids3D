@@ -187,7 +187,7 @@ void GLCanvas::initializeGL()
 
     psfSolver = new PSFSolver();
     psfSolverGPU = new PSFSolverGPU();
-    solver = psfSolver;
+    solver = psfSolverGPU;
 }
 
 void GLCanvas::paintGL()
@@ -205,12 +205,12 @@ void GLCanvas::paintGL()
 
         if(voxelVisible)
         {
-            psfSolver->drawGrid(lineProgram,pvm);
+            solver->drawGrid(lineProgram,pvm);
         }
 
         if(velocityVisible)
         {
-            psfSolver->drawVelocity(lineProgram,pvm);
+            solver->drawVelocity(lineProgram,pvm);
         }
 
         if(particleVisible)
@@ -222,7 +222,7 @@ void GLCanvas::paintGL()
 
             Vertex::setVertexAttribs();
             Vertex::enableVertexAttribs();
-            psfSolver->drawParticles(lineProgram,pvm);
+            solver->drawParticles(lineProgram,pvm);
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
@@ -250,7 +250,7 @@ void GLCanvas::paintGL()
             glDrawElements(GL_TRIANGLES,mesh->getIndices().size(),GL_UNSIGNED_INT,(void*)0);
             Vertex::setVertexAttribs();
             Vertex::enableVertexAttribs();
-            psfSolver->drawParticles(lineProgram,pvm);
+            solver->drawParticles(lineProgram,pvm);
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
