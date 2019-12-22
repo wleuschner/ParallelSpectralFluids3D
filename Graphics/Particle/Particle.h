@@ -6,10 +6,12 @@ class Particle
 {
 public:
     Particle();
-    Particle(double lifeTime,glm::dvec3 position);
+    Particle(float lifeTime,glm::vec3 position);
 
-    double lifeTime;
-    glm::dvec3 position;
+    static void enableVertexAttribs();
+    static void setVertexAttribs();
+
+    glm::vec4 position;
 };
 
 #endif

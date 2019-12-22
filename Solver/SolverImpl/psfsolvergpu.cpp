@@ -6,54 +6,63 @@
 #include <fstream>
 #include <string>
 #include <CL/cl_gl.h>
+#include <CL/cl_gl_ext.h>
 #include <GL/glx.h>
+#include <QElapsedTimer>
 #include "../../Spectra/MatOp/SparseSymShiftSolve.h"
 #include "../../Spectra/SymEigsShiftSolver.h"
 #include "../../DEC/dec.h"
 
-PSFSolverGPU::PSFSolverGPU() : AbstractSolver()
+PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_queue queue) : AbstractSolver()
 {
-    Display* display = glXGetCurrentDisplay();
-    GLXContext gl_context = glXGetCurrentContext();
+    cl_context_id = context;
+    cl_queue = queue;
+    device_id = device;
+    viennacl::ocl::setup_context(0,cl_context_id,device_id,cl_queue);
 
-    // Get platform and device information
-    cl_platform_id platform_id = NULL;
-    cl_device_id device_id = NULL;
-    cl_uint ret_num_devices;
-    cl_uint ret_num_platforms;
-    cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_GPU, 1,
-            &device_id, &ret_num_devices);
-
-    cl_context_properties props[] = {
-        CL_CONTEXT_PLATFORM,(cl_context_properties) platform_id,
-        CL_GLX_DISPLAY_KHR,(cl_context_properties) display,
-        CL_GL_CONTEXT_KHR,(cl_context_properties) gl_context,
-        0
-    };
-
-    cl_context_id = clCreateContext(props,1,&device_id,0,0,&ret);
-
-    cl_command_queue queue = clCreateCommandQueue(cl_context_id,device_id,0,0);
-
-    viennacl::ocl::setup_context(0,cl_context_id,device_id,queue);
-
-    std::ifstream f("Resources/Simulation/simulation.cl");
+    std::ifstream f("Res/Simulation/simulation.cl");
     std::string source((std::istreambuf_iterator<char>(f)),
                      std::istreambuf_iterator<char>());
+    cl_int ret;
 
-//    cl_mem particlesBuffer = clCreateFromGLBuffer(viennacl::ocl::current_context(),CL_MEM_READ_WRITE,particleVerts->id);
-    viennacl::ocl::program& vcl_prog_psf = viennacl::ocl::current_context().add_program(source.data(),"advection");
-    viennacl::ocl::kernel& advection_kernel = vcl_prog_psf.get_kernel("advection");
+    const char* src = source.data();
+    program = clCreateProgramWithSource(cl_context_id,1,&src,0,&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not Create Program"<<std::endl;
+        exit(-1);
+    }
+
+    ret = clBuildProgram(program,1,&device_id,"-cl-fp32-correctly-rounded-divide-sqrt -cl-no-signed-zeros",0,0);
+
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build program"<<std::endl;
+        char buffer[2048];
+        size_t length;
+        clGetProgramBuildInfo(program,device,CL_PROGRAM_BUILD_LOG,sizeof(buffer),buffer,&length);
+        std::cout<<buffer<<std::endl;
+        exit(-1);
+    }
+
+    kernel = clCreateKernel(program,"advection",&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build kernel"<<std::endl;
+        exit(-1);
+    }
 }
 
 void PSFSolverGPU::integrate()
 {
+    QElapsedTimer timer;
+    timer.start();
+
 
     viennacl::scalar<double> e1 = 0.0;
     viennacl::scalar<double> e2 = 0.0;
 
-    e1 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
+    viennacl::linalg::norm_2_impl(vcl_basisCoeff,e1);
 
     viennacl::vector<double> vel = viennacl::zero_vector<double>(nEigenFunctions);
 
@@ -63,9 +72,9 @@ void PSFSolverGPU::integrate()
     }
     vcl_basisCoeff += timeStep*vel;
 
-    e2 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
+    viennacl::linalg::norm_2_impl(vcl_basisCoeff,e2);
 
-    basisCoeff *= std::sqrt(e1/e2);
+    basisCoeff *= e1/e2;
 
     for(unsigned int k=0;k<nEigenFunctions;k++)
     {
@@ -76,11 +85,71 @@ void PSFSolverGPU::integrate()
         vcl_basisCoeff += timeStep*vcl_gravity;
     }
     vcl_velocityField = viennacl::linalg::prod(vcl_velBasisField,vcl_basisCoeff);
+
+    cl_int ret;
+    unsigned int workGroupSize = 128;
+    unsigned int workGroups = std::ceil(maxParticles/float(workGroupSize));
+    glFinish();
+    cl_int res;
+    cl_event event;
+
+    particlesBuffer = clCreateFromGLBuffer(cl_context_id,CL_MEM_READ_WRITE,particles->id,&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not create CLGL Buffer Object!"<<std::endl;
+        exit(-1);
+    }
+
+    res = clEnqueueAcquireGLObjects(cl_queue,1,&particlesBuffer,0,0,&event);
+    res = clWaitForEvents(1,&event);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Failed to Acquire GL objects";
+        exit(-1);
+    }
+    glm::uvec4 dims = glm::uvec4(decMesh.getDimensions(),0);
+    glm::vec4 aabb_min = glm::vec4(mesh->getAABB().min,0.0);
+    glm::vec4 aabb_max = glm::vec4(mesh->getAABB().max,0.0);
+    glm::vec4 aabb_extent = glm::vec4(mesh->getAABB().getExtent(),0.0);
+    float resf = resolution;
+    cl_float timestep = timeStep;
+    size_t global_work_size = {maxParticles};
+    size_t local_work_size = {256};
+    cl_mem vel_handle = vcl_velocityField.handle().opencl_handle();
+    clSetKernelArg(kernel,0,sizeof(cl_mem),&particlesBuffer);
+    clSetKernelArg(kernel,1,sizeof(cl_mem),&vel_handle);
+    clSetKernelArg(kernel,2,sizeof(cl_mem),&signBitStringHandle);
+    clSetKernelArg(kernel,3,sizeof(cl_uint4),&dims);
+    clSetKernelArg(kernel,4,sizeof(cl_float4),&aabb_min);
+    clSetKernelArg(kernel,5,sizeof(cl_float4),&aabb_max);
+    clSetKernelArg(kernel,6,sizeof(cl_float4),&aabb_extent);
+    clSetKernelArg(kernel,7,sizeof(cl_float),&resf);
+    clSetKernelArg(kernel,8,sizeof(cl_float),&timestep);
+    res = clEnqueueNDRangeKernel(cl_queue,kernel,1,0,&global_work_size,0,0,0,&event);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel"<<std::endl;
+    }
+    res = clWaitForEvents(1,&event);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Could not wait for kernel completion"<<std::endl;
+    }
+    res = clEnqueueReleaseGLObjects(cl_queue,1,&particlesBuffer,0,0,&event);
+    res = clWaitForEvents(1,&event);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Failed to Release GL objects";
+        exit(-1);
+    }
+    clReleaseMemObject(particlesBuffer);
+    clFinish(cl_queue);
+    std::cout<<timer.elapsed()<<std::endl;
 }
 
 void PSFSolverGPU::buildLaplace()
 {
-    Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
+    Eigen::SparseMatrix<double> mat = 1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
     for(int k=0;k<bound.outerSize();k++)
@@ -92,16 +161,16 @@ void PSFSolverGPU::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            //mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
         }
     }
-    mat.pruned();
+    //mat.pruned();
 
     eigenValues.resize(nEigenFunctions);
     velBasisField.resize(decMesh.getNumFaces(),nEigenFunctions);
     bool decompositionDone=false;
     unsigned int foundEigenValues=0;
-    double omega = 1e-6;
+    double omega = 0.0;
     while(foundEigenValues<nEigenFunctions)
     {
         try
@@ -110,37 +179,56 @@ void PSFSolverGPU::buildLaplace()
             Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
-            int nconv = solver.compute(1000,1e-6,Spectra::WHICH_SM);
+            int nconv = solver.compute(1000,1e-6,Spectra::WHICH_LM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
 
                 Eigen::VectorXd tempEigenValues = solver.eigenvalues().real();
                 Eigen::MatrixXd tempEigenVectors = solver.eigenvectors().real();
+                bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
-                    if(std::abs(tempEigenValues(i))>1e-10)
+                    Eigen::VectorXd backProjection = mat*tempEigenVectors.col(i);
+                    if(backProjection.isApprox(tempEigenValues(i)*tempEigenVectors.col(i),1))
+                    //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
+                        bool doubleEv = false;
                         for(unsigned int j=0;j<foundEigenValues;j++)
                         {
-                            if((velBasisField.col(j).dot(tempEigenVectors.col(i)))>1.0-std::numeric_limits<double>::epsilon())
+                            if(fabs(eigenValues(j)-tempEigenValues(i))<=std::numeric_limits<float>::epsilon())
+                            //if(velBasisField.col(j).isApprox(tempEigenVectors.col(i)))
                             {
-                                std::cout<<"Already Inside"<<std::endl;
-                                continue;
+                                std::cout<<"Already Inside "<<tempEigenValues(i)<<std::endl;
+                                doubleEv = true;
+                                break;
                             }
                         }
+                        if(!doubleEv)
+                        {
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
-                        omega = tempEigenValues(i);
+                        //if(tempEigenValues(i)!=0.0)
+                        {
+                            omega = tempEigenValues(i);
+                            onlyZero = false;
+                        }
                         eigenValues(foundEigenValues) = tempEigenValues(i);
                         velBasisField.col(foundEigenValues) = tempEigenVectors.col(i);
                         foundEigenValues++;
+                        }
                     }
-                    else
+                    //else
                     {
-                        std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
+                        //std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
                     }
                 }
-                omega+=1e-6;
+                if(onlyZero)
+                  omega+=0.1;
                 decompositionDone = true;
+            }
+            else
+            {
+                std::cout<<"Nothing Found"<<std::endl;
+                omega+=0.1;
             }
         }
         catch(std::runtime_error e)
@@ -167,13 +255,23 @@ void PSFSolverGPU::buildLaplace()
     }
     gravity = velBasisField.transpose()*gravity;
 
+    std::vector<unsigned int>& signBitString = decMesh.getSignBitString();
+    cl_int ret;
+    signBitStringHandle = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,signBitString.size()*sizeof(unsigned int),signBitString.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+
     std::vector<Vertex> vertices = mesh->getVertices();
 
+    vorticityField = Eigen::VectorXd::Zero(decMesh.getNumEdges());
     vorticityField = Eigen::VectorXd::Zero(decMesh.getNumEdges());
     //vorticityField.setRandom();
     //glm::uvec3 dims = decMesh.getDimensions();
     //vorticityField(decMesh.getNumEdges()/2) = 2e+64;
-/*
+
     for(EdgeIterator it=decMesh.getEdgeIteratorBegin();it!=decMesh.getEdgeIteratorEnd();it++)
     {
         if(it->inside==GridState::INSIDE)
@@ -189,7 +287,7 @@ void PSFSolverGPU::buildLaplace()
                 if((p1.x>=0.0&&p1.x<=0.0&&p1.y==0.0&&p2.x>=0.0&&p2.x<=0.0&&p2.y==0.0))
                 {
 
-                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*2;
+                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*1;
                 }
                 //if((p1.x>=0.5&&p1.x<=0.7&&p1.y==0.0&&p2.x>=0.5&&p2.x<=0.7&&p2.y==0.0))
                 //{
@@ -204,7 +302,6 @@ void PSFSolverGPU::buildLaplace()
         }
     }
     setInitialVorticityField(vorticityField);
-    */
 
     velocityField = Eigen::VectorXd::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
@@ -215,10 +312,9 @@ void PSFSolverGPU::buildLaplace()
             if(std::abs(glm::dot(glm::dvec3(0.0,1.0,0.0),it->normal))>std::numeric_limits<double>::epsilon())
             {
                 AABB aabb = mesh->getAABB();
-                unsigned int zId = (it->id%(dims.x*dims.y+2*dims.x*dims.y-dims.x-dims.y));
-                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0))&&
-                   it->center.y<=aabb.min.y+0.1)
-                        velocityField(it->id) = (it->normal.y>0?1:-1)*0.00001;
+                if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
+                   it->center.y<aabb.min.y+0.4)
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*1.0;
 
             }
         }
@@ -228,7 +324,7 @@ void PSFSolverGPU::buildLaplace()
     vcl_velBasisField.resize(velBasisField.rows(),velBasisField.cols());
     vcl_gravity.resize(gravity.size());
     vcl_vorticityField.resize(vorticityField.rows(),vorticityField.cols());
-    vcl_velocityField.resize(velBasisField.rows(),velBasisField.cols());
+    vcl_velocityField.resize(velocityField.rows(),velocityField.cols());
     vcl_basisCoeff.resize(basisCoeff.size());
 
     viennacl::copy(vortBasisField,vcl_vortBasisField);
@@ -237,6 +333,19 @@ void PSFSolverGPU::buildLaplace()
     viennacl::copy(vorticityField,vcl_vorticityField);
     viennacl::copy(velocityField,vcl_velocityField);
     viennacl::copy(basisCoeff,vcl_basisCoeff);
+
+    for(unsigned int i=0;i<400000;i++)
+    {
+        glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
+        pos.y= mesh->getAABB().min.y+0.2f;
+        //pos.y+=((rand()%1024)/1024.0-0.5)*0.5;
+        //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
+        pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
+        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.5;
+        //pos = glm::dvec3(0.0);
+        addParticle(Particle(30*60,pos));
+    }
+    particles->syncGPU();
 }
 
 void PSFSolverGPU::buildAdvection()
@@ -253,6 +362,7 @@ void PSFSolverGPU::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
+    double scale = (decMesh.resolution/2)*(decMesh.resolution/2);
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)
@@ -277,12 +387,20 @@ void PSFSolverGPU::buildAdvection()
             unsigned int ie11 = decMesh.signedIdToIndex(f6.e1);
             unsigned int ie12 = decMesh.signedIdToIndex(f6.e3);
 
-            double s1 = decMesh.getFaceSignum(fit->f1);
+/*            double s1 = decMesh.getFaceSignum(fit->f1);
             double s2 = decMesh.getFaceSignum(fit->f2);
             double s3 = decMesh.getFaceSignum(fit->f3);
             double s4 = decMesh.getFaceSignum(fit->f4);
             double s5 = decMesh.getFaceSignum(fit->f5);
-            double s6 = decMesh.getFaceSignum(fit->f6);
+            double s6 = decMesh.getFaceSignum(fit->f6);*/
+
+
+            double s1 = 1;
+            double s2 = 1;
+            double s3 = 1;
+            double s4 = 1;
+            double s5 = 1;
+            double s6 = 1;
 
             for(unsigned int i=0;i<nEigenFunctions;i++)
             {
@@ -302,20 +420,37 @@ void PSFSolverGPU::buildAdvection()
                     double vel5b = s5*velBasisField(labs(fit->f5)-1,j);
                     double vel6b = s6*velBasisField(labs(fit->f6)-1,j);
 
-                    wedges[i](ie1,j) += (0.25)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie2,j) += (0.25)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie3,j) += (0.25)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(f1.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie4,j) += (0.25)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(f1.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    /*
+                    wedges[i](ie1,j) += (0.25)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(-f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (0.25)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,-f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (0.25)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(f1.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie4,j) += (0.25)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(-f1.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie5,j) += (0.25)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(f2.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie6,j) += (0.25)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(f2.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie7,j) += (0.25)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(f2.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie8,j) += (0.25)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(f2.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie5,j) += (0.25)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(-f2.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (0.25)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(f2.normal,-f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie7,j) += (0.25)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(f2.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie8,j) += (0.25)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(-f2.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie9,j) += (0.25)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(f5.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie10,j) += (0.25)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(f5.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie11,j) += (0.25)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(f6.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie12,j) += (0.25)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(f6.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie9,j) += (0.25)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(-f5.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (0.25)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(f5.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (0.25)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(-f6.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie12,j) += (0.25)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(f6.normal,-f3.normal),glm::dvec3(1.0,1.0,1.0)));*/
+
+
+                    wedges[i](ie1,j) += (scale)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (scale)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (scale)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(f1.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie4,j) += (scale)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(f1.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
+
+                    wedges[i](ie5,j) += (scale)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(f2.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (scale)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(f2.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie7,j) += (scale)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(f2.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie8,j) += (scale)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(f2.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
+
+                    wedges[i](ie9,j) += (scale)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(f5.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (scale)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(f5.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (scale)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(f6.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie12,j) += (scale)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(f6.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
                 }
             }
         }
@@ -334,4 +469,16 @@ void PSFSolverGPU::buildAdvection()
         vcl_advection[i].resize(advection[i].rows(),advection[i].cols());
         viennacl::copy(advection[i],vcl_advection[i]);
     }
+}
+
+void PSFSolverGPU::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
+{
+    glEnableClientState(GL_VERTEX_ARRAY);
+    particles->bind();
+    Vertex::setVertexAttribs();
+    Vertex::enableVertexAttribs();
+    program->bind();
+    program->uploadMat4("pvm",pvm);
+    program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
+    glDrawArrays(GL_POINTS,0,maxParticles);
 }

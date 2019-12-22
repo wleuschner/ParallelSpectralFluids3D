@@ -79,6 +79,12 @@ DECMesh3D::DECMesh3D(float resolution,glm::uvec3 dims,float voxelSize,glm::vec3 
     this->dims = dims;
     this->voxelSize = voxelSize;
 
+    signBitString.resize(ceil(voxels.size()/5.0));
+    for(unsigned int i=0;i<signBitString.size();i++)
+    {
+        signBitString[i] = 0;
+    }
+
 
     //Add Voxel
     //#pragma omp parallel for
@@ -1384,6 +1390,17 @@ void DECMesh3D::addVoxel(const Voxel3D& v, unsigned x,unsigned y,unsigned z)
         voxels[vid].f4 *= addFace(Face3D(voxels[vid].f4,v.inside),FaceDirection::TOP,x,y+1,z);
         voxels[vid].f5 *= addFace(Face3D(voxels[vid].f5,v.inside),FaceDirection::LEFT,x,y,z);
         voxels[vid].f6 *= addFace(Face3D(voxels[vid].f6,v.inside),FaceDirection::RIGHT,x+1,y,z);
+
+        int idx=vid/5;
+        int offset=vid%5;
+        int orField = 0;
+        orField |= (voxels[vid].f1<0?0:1)<<(offset*6+0);
+        orField |= (voxels[vid].f2<0?0:1)<<(offset*6+1);
+        orField |= (voxels[vid].f3<0?0:1)<<(offset*6+2);
+        orField |= (voxels[vid].f4<0?0:1)<<(offset*6+3);
+        orField |= (voxels[vid].f5<0?0:1)<<(offset*6+4);
+        orField |= (voxels[vid].f6<0?0:1)<<(offset*6+5);
+        signBitString[idx] |= orField;
     }
     else {
         std::cout<<"CONFLICT"<<std::endl;
@@ -1401,6 +1418,13 @@ bool DECMesh3D::checkInternalState()
         for(unsigned int j=0;j<6;j++)
         {
             assert(v.f[j]!=0);
+            int sign1 = getFaceSignum(v.f[j]);
+
+            unsigned int bitField = signBitString[v.id/5];
+            int idx=v.id/5;
+            int offset=v.id%5;
+            int sign2 = signBitString[idx]>>(offset*6+(j))&1?1:-1;
+            assert(sign1==sign2);
         }
 
         for(unsigned int j=0;j<6;j+=2)
@@ -1751,6 +1775,11 @@ Edge3D* DECMesh3D::getEdges()
     return edges.data();
 }
 
+std::vector<unsigned int>& DECMesh3D::getSignBitString()
+{
+    return signBitString;
+}
+
 glm::uvec3 DECMesh3D::getDimensions()
 {
     return dims;
@@ -1824,6 +1853,14 @@ int DECMesh3D::getVoxelSignum(int id)
 {
     return 1;
 }
+
+int DECMesh3D::getFaceSignum(unsigned int vid,unsigned int fidx)
+{
+    int idx=vid/5;
+    int offset=vid%5;
+    return signBitString[idx]>>(offset*6+(fidx))&1?1:-1;
+}
+
 
 unsigned int DECMesh3D::getNumPoints()
 {

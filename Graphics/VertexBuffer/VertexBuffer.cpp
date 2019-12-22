@@ -16,8 +16,15 @@ void VertexBuffer::bindBufferBase(unsigned int id)
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER,id,this->id);
 }
 
+void VertexBuffer::reserve(uint32_t num_verts)
+{
+    bind();
+    glBufferData(GL_ARRAY_BUFFER,num_verts*sizeof(Vertex),0,GL_STREAM_DRAW);
+
+}
+
 void VertexBuffer::upload(const std::vector<Vertex>& vertices)
 {
     bind();
-    glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(Vertex),(void*)vertices.data(),GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,vertices.size()*sizeof(Vertex),(void*)vertices.data(),GL_STREAM_DRAW);
 }

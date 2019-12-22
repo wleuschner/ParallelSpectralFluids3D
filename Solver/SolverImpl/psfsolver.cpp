@@ -4,6 +4,7 @@
 #include<iostream>
 #include<set>
 #include<map>
+#include <QElapsedTimer>
 #include"microprofile/microprofile.h"
 #include"../../Spectra/MatOp/SparseSymShiftSolve.h"
 #include"../../Spectra/SymEigsShiftSolver.h"
@@ -17,6 +18,8 @@ PSFSolver::PSFSolver() : AbstractSolver()
 
 void PSFSolver::integrate()
 {
+    QElapsedTimer timer;
+    timer.start();
     MICROPROFILE_SCOPEI("SolverCPU","integrate",0xFF000000);
     double e1 = 0.0;
     double e2 = 0.0;
@@ -50,10 +53,11 @@ void PSFSolver::integrate()
 
     glm::uvec3 dims = decMesh.getDimensions();
     std::vector<Vertex>& vertex = mesh->getVertices();
-    #pragma omp parallel for
-    for(std::vector<Particle>::iterator it=particles.begin();it<particles.end();it++)
+    std::vector<Particle>& parts = particles->getParticles();
+    //#pragma omp parallel for
+    for(std::vector<Particle>::iterator it=parts.begin();it<parts.end();it++)
     {
-        if(simTime<it->lifeTime)
+        if(simTime<it->position.w)
         {
             int yOfs = static_cast<int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y)/resolution);
             int xOfs = static_cast<int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x)/resolution);
@@ -84,29 +88,169 @@ void PSFSolver::integrate()
             assert(xOfsMinus>=0);
             assert(xOfsPlus>=0);
 
-            Voxel3D v1x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsMinus));
-            Voxel3D v2x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsMinus));
-            Voxel3D v3x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsPlus));
-            Voxel3D v4x = decMesh.getVoxel(decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsPlus));
+            unsigned int v1xIdx = decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsMinus);
+            unsigned int v2xIdx = decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsMinus);
+            unsigned int v3xIdx = decMesh.getVoxelIndex(xOfs,yOfsMinus,zOfsPlus);
+            unsigned int v4xIdx = decMesh.getVoxelIndex(xOfs,yOfsPlus,zOfsPlus);
 
-            Voxel3D v1y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsMinus));
-            Voxel3D v2y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsMinus));
-            Voxel3D v3y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsPlus));
-            Voxel3D v4y = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsPlus));
+            unsigned int v1yIdx = decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsMinus);
+            unsigned int v2yIdx = decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsMinus);
+            unsigned int v3yIdx = decMesh.getVoxelIndex(xOfsMinus,yOfs,zOfsPlus);
+            unsigned int v4yIdx = decMesh.getVoxelIndex(xOfsPlus,yOfs,zOfsPlus);
 
-            Voxel3D v1z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfsMinus,zOfs));
-            Voxel3D v2z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfsMinus,zOfs));
-            Voxel3D v3z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsMinus,yOfsPlus,zOfs));
-            Voxel3D v4z = decMesh.getVoxel(decMesh.getVoxelIndex(xOfsPlus,yOfsPlus,zOfs));
+            unsigned int v1zIdx = decMesh.getVoxelIndex(xOfsMinus,yOfsMinus,zOfs);
+            unsigned int v2zIdx = decMesh.getVoxelIndex(xOfsPlus,yOfsMinus,zOfs);
+            unsigned int v3zIdx = decMesh.getVoxelIndex(xOfsMinus,yOfsPlus,zOfs);
+            unsigned int v4zIdx = decMesh.getVoxelIndex(xOfsPlus,yOfsPlus,zOfs);
+
+
+            Voxel3D v1x = decMesh.getVoxel(v1xIdx);
+            Voxel3D v2x = decMesh.getVoxel(v2xIdx);
+            Voxel3D v3x = decMesh.getVoxel(v3xIdx);
+            Voxel3D v4x = decMesh.getVoxel(v4xIdx);
+
+            Voxel3D v1y = decMesh.getVoxel(v1yIdx);
+            Voxel3D v2y = decMesh.getVoxel(v2yIdx);
+            Voxel3D v3y = decMesh.getVoxel(v3yIdx);
+            Voxel3D v4y = decMesh.getVoxel(v4yIdx);
+
+            Voxel3D v1z = decMesh.getVoxel(v1zIdx);
+            Voxel3D v2z = decMesh.getVoxel(v2zIdx);
+            Voxel3D v3z = decMesh.getVoxel(v3zIdx);
+            Voxel3D v4z = decMesh.getVoxel(v4zIdx);
 
             Face3D xf = decMesh.getFace(v1x.f5);
             Face3D yf = decMesh.getFace(v1y.f3);
             Face3D zf = decMesh.getFace(v1z.f1);
 
+            glm::vec3 cf1x = glm::vec3(mesh->getAABB().min)+(float)(resolution)*glm::vec3(xOfs,yOfsMinus,zOfsMinus)+0.5f*glm::vec3(0.0f,resolution,resolution);
+
+            glm::vec3 cf1y = glm::vec3(mesh->getAABB().min)+(float)(resolution)*glm::vec3(xOfsMinus,yOfs,zOfsMinus)+0.5f*glm::vec3(resolution,0.0f,resolution);
+
+            glm::vec3 cf1z = glm::vec3(mesh->getAABB().min)+(float)(resolution)*glm::vec3(xOfsMinus,yOfsMinus,zOfs)+0.5f*glm::vec3(resolution,resolution,0.0f);
+
+            /*
             glm::vec3 cf1x = xf.center;
             glm::vec3 cf1y = yf.center;
-            glm::vec3 cf1z = zf.center;
+            glm::vec3 cf1z = zf.center;*/
 
+            unsigned int v1xf5 = decMesh.getXFaceIndex(xOfs,yOfsMinus,zOfsMinus);
+            unsigned int v1xf6 = decMesh.getXFaceIndex(xOfs+1,yOfsMinus,zOfsMinus);
+            unsigned int v2xf5 = decMesh.getXFaceIndex(xOfs,yOfsPlus,zOfsMinus);
+            unsigned int v2xf6 = decMesh.getXFaceIndex(xOfs+1,yOfsPlus,zOfsMinus);
+            unsigned int v3xf5 = decMesh.getXFaceIndex(xOfs,yOfsMinus,zOfsPlus);
+            unsigned int v3xf6 = decMesh.getXFaceIndex(xOfs+1,yOfsMinus,zOfsPlus);
+            unsigned int v4xf5 = decMesh.getXFaceIndex(xOfs,yOfsPlus,zOfsPlus);
+            unsigned int v4xf6 = decMesh.getXFaceIndex(xOfs+1,yOfsPlus,zOfsPlus);
+
+            assert(v1xf5 == decMesh.signedIdToIndex(v1x.f5));
+            assert(v1xf6 == decMesh.signedIdToIndex(v1x.f6));
+            assert(v2xf5 == decMesh.signedIdToIndex(v2x.f5));
+            assert(v2xf6 == decMesh.signedIdToIndex(v2x.f6));
+            assert(v3xf5 == decMesh.signedIdToIndex(v3x.f5));
+            assert(v3xf6 == decMesh.signedIdToIndex(v3x.f6));
+            assert(v4xf5 == decMesh.signedIdToIndex(v4x.f5));
+            assert(v4xf6 == decMesh.signedIdToIndex(v4x.f6));
+
+            unsigned int v1yf3 = decMesh.getYFaceIndex(xOfsMinus,yOfs,zOfsMinus);
+            unsigned int v1yf4 = decMesh.getYFaceIndex(xOfsMinus,yOfs+1,zOfsMinus);
+            unsigned int v2yf3 = decMesh.getYFaceIndex(xOfsPlus,yOfs,zOfsMinus);
+            unsigned int v2yf4 = decMesh.getYFaceIndex(xOfsPlus,yOfs+1,zOfsMinus);
+            unsigned int v3yf3 = decMesh.getYFaceIndex(xOfsMinus,yOfs,zOfsPlus);
+            unsigned int v3yf4 = decMesh.getYFaceIndex(xOfsMinus,yOfs+1,zOfsPlus);
+            unsigned int v4yf3 = decMesh.getYFaceIndex(xOfsPlus,yOfs,zOfsPlus);
+            unsigned int v4yf4 = decMesh.getYFaceIndex(xOfsPlus,yOfs+1,zOfsPlus);
+
+            assert(v1yf3 == decMesh.signedIdToIndex(v1y.f3));
+            assert(v1yf4 == decMesh.signedIdToIndex(v1y.f4));
+            assert(v2yf3 == decMesh.signedIdToIndex(v2y.f3));
+            assert(v2yf4 == decMesh.signedIdToIndex(v2y.f4));
+            assert(v3yf3 == decMesh.signedIdToIndex(v3y.f3));
+            assert(v3yf4 == decMesh.signedIdToIndex(v3y.f4));
+            assert(v4yf3 == decMesh.signedIdToIndex(v4y.f3));
+            assert(v4yf4 == decMesh.signedIdToIndex(v4y.f4));
+
+            unsigned int v1zf1 = decMesh.getZFaceIndex(xOfsMinus,yOfsMinus,zOfs);
+            unsigned int v1zf2 = decMesh.getZFaceIndex(xOfsMinus,yOfsMinus,zOfs+1);
+            unsigned int v2zf1 = decMesh.getZFaceIndex(xOfsPlus,yOfsMinus,zOfs);
+            unsigned int v2zf2 = decMesh.getZFaceIndex(xOfsPlus,yOfsMinus,zOfs+1);
+            unsigned int v3zf1 = decMesh.getZFaceIndex(xOfsMinus,yOfsPlus,zOfs);
+            unsigned int v3zf2 = decMesh.getZFaceIndex(xOfsMinus,yOfsPlus,zOfs+1);
+            unsigned int v4zf1 = decMesh.getZFaceIndex(xOfsPlus,yOfsPlus,zOfs);
+            unsigned int v4zf2 = decMesh.getZFaceIndex(xOfsPlus,yOfsPlus,zOfs+1);
+
+            assert(v1zf1 == decMesh.signedIdToIndex(v1z.f1));
+            assert(v1zf2 == decMesh.signedIdToIndex(v1z.f2));
+            assert(v2zf1 == decMesh.signedIdToIndex(v2z.f1));
+            assert(v2zf2 == decMesh.signedIdToIndex(v2z.f2));
+            assert(v3zf1 == decMesh.signedIdToIndex(v3z.f1));
+            assert(v3zf2 == decMesh.signedIdToIndex(v3z.f2));
+            assert(v4zf1 == decMesh.signedIdToIndex(v4z.f1));
+            assert(v4zf2 == decMesh.signedIdToIndex(v4z.f2));
+
+/*
+            double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
+            vel1x = -decMesh.getFaceSignum(v1x.f5)*velocityField((v1xf5));
+            vel3x = decMesh.getFaceSignum(v1x.f6)*velocityField((v1xf6));
+            vel2x = -decMesh.getFaceSignum(v2x.f5)*velocityField((v2xf5));
+            vel4x = decMesh.getFaceSignum(v2x.f6)*velocityField((v2xf6));
+            vel5x = -decMesh.getFaceSignum(v3x.f5)*velocityField((v3xf5));
+            vel7x = decMesh.getFaceSignum(v3x.f6)*velocityField((v3xf6));
+            vel6x = -decMesh.getFaceSignum(v4x.f5)*velocityField((v4xf5));
+            vel8x = decMesh.getFaceSignum(v4x.f6)*velocityField((v4xf6));
+
+            double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
+            vel1y = -decMesh.getFaceSignum(v1y.f3)*velocityField((v1yf3));
+            vel2y = decMesh.getFaceSignum(v1y.f4)*velocityField((v1yf4));
+            vel3y = -decMesh.getFaceSignum(v2y.f3)*velocityField((v2yf3));
+            vel4y = decMesh.getFaceSignum(v2y.f4)*velocityField((v2yf4));
+            vel5y = -decMesh.getFaceSignum(v3y.f3)*velocityField((v3yf3));
+            vel6y = decMesh.getFaceSignum(v3y.f4)*velocityField((v3yf4));
+            vel7y = -decMesh.getFaceSignum(v4y.f3)*velocityField((v4yf3));
+            vel8y = decMesh.getFaceSignum(v4y.f4)*velocityField((v4yf4));
+
+            double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
+            vel1z = decMesh.getFaceSignum(v1z.f1)*velocityField((v1zf1));
+            vel2z = decMesh.getFaceSignum(v3z.f1)*velocityField((v3zf1));
+            vel3z = decMesh.getFaceSignum(v2z.f1)*velocityField((v2zf1));
+            vel4z = decMesh.getFaceSignum(v4z.f1)*velocityField((v4zf1));
+            vel5z = -decMesh.getFaceSignum(v1z.f2)*velocityField((v1zf2));
+            vel6z = -decMesh.getFaceSignum(v3z.f2)*velocityField((v3zf2));
+            vel7z = -decMesh.getFaceSignum(v2z.f2)*velocityField((v2zf2));
+            vel8z = -decMesh.getFaceSignum(v4z.f2)*velocityField((v4zf2));
+*/
+
+            double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
+            vel1x = -decMesh.getFaceSignum(v1xIdx,4)*velocityField((v1xf5));
+            vel3x = decMesh.getFaceSignum(v1xIdx,5)*velocityField((v1xf6));
+            vel2x = -decMesh.getFaceSignum(v2xIdx,4)*velocityField((v2xf5));
+            vel4x = decMesh.getFaceSignum(v2xIdx,5)*velocityField((v2xf6));
+            vel5x = -decMesh.getFaceSignum(v3xIdx,4)*velocityField((v3xf5));
+            vel7x = decMesh.getFaceSignum(v3xIdx,5)*velocityField((v3xf6));
+            vel6x = -decMesh.getFaceSignum(v4xIdx,4)*velocityField((v4xf5));
+            vel8x = decMesh.getFaceSignum(v4xIdx,5)*velocityField((v4xf6));
+
+            double vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
+            vel1y = -decMesh.getFaceSignum(v1yIdx,2)*velocityField((v1yf3));
+            vel2y = decMesh.getFaceSignum(v1yIdx,3)*velocityField((v1yf4));
+            vel3y = -decMesh.getFaceSignum(v2yIdx,2)*velocityField((v2yf3));
+            vel4y = decMesh.getFaceSignum(v2yIdx,3)*velocityField((v2yf4));
+            vel5y = -decMesh.getFaceSignum(v3yIdx,2)*velocityField((v3yf3));
+            vel6y = decMesh.getFaceSignum(v3yIdx,3)*velocityField((v3yf4));
+            vel7y = -decMesh.getFaceSignum(v4yIdx,2)*velocityField((v4yf3));
+            vel8y = decMesh.getFaceSignum(v4yIdx,3)*velocityField((v4yf4));
+
+            double vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
+            vel1z = decMesh.getFaceSignum(v1zIdx,0)*velocityField((v1zf1));
+            vel2z = decMesh.getFaceSignum(v3zIdx,0)*velocityField((v3zf1));
+            vel3z = decMesh.getFaceSignum(v2zIdx,0)*velocityField((v2zf1));
+            vel4z = decMesh.getFaceSignum(v4zIdx,0)*velocityField((v4zf1));
+            vel5z = -decMesh.getFaceSignum(v1zIdx,1)*velocityField((v1zf2));
+            vel6z = -decMesh.getFaceSignum(v3zIdx,1)*velocityField((v3zf2));
+            vel7z = -decMesh.getFaceSignum(v2zIdx,1)*velocityField((v2zf2));
+            vel8z = -decMesh.getFaceSignum(v4zIdx,1)*velocityField((v4zf2));
+
+            /*
             double vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
             vel1x = -decMesh.getFaceSignum(v1x.f5)*velocityField(decMesh.signedIdToIndex(v1x.f5));
             vel3x = decMesh.getFaceSignum(v1x.f6)*velocityField(decMesh.signedIdToIndex(v1x.f6));
@@ -135,37 +279,51 @@ void PSFSolver::integrate()
             vel5z = -decMesh.getFaceSignum(v1z.f2)*velocityField(decMesh.signedIdToIndex(v1z.f2));
             vel6z = -decMesh.getFaceSignum(v3z.f2)*velocityField(decMesh.signedIdToIndex(v3z.f2));
             vel7z = -decMesh.getFaceSignum(v2z.f2)*velocityField(decMesh.signedIdToIndex(v2z.f2));
-            vel8z = -decMesh.getFaceSignum(v4z.f2)*velocityField(decMesh.signedIdToIndex(v4z.f2));
+            vel8z = -decMesh.getFaceSignum(v4z.f2)*velocityField(decMesh.signedIdToIndex(v4z.f2));*/
 
             glm::dvec3 particleNormalizedX;
             glm::dvec3 particleNormalizedY;
             glm::dvec3 particleNormalizedZ;
             glm::dvec3 vel;
 
-            particleNormalizedX = (1.0/resolution)*((it->position)-glm::dvec3(cf1x));
+            particleNormalizedX = (1.0/resolution)*((glm::dvec3(it->position))-glm::dvec3(cf1x));
+            assert(particleNormalizedX.x>=0.0);
+            assert(particleNormalizedX.y>=0.0);
+            assert(particleNormalizedX.z>=0.0);
+
+
             glm::dvec4 xVelXInterp = glm::mix(glm::dvec4(vel1x,vel3x,vel5x,vel7x),glm::dvec4(vel2x,vel4x,vel6x,vel8x),particleNormalizedX.y);
             glm::dvec2 xVelYInterp = glm::mix(glm::dvec2(xVelXInterp.x,xVelXInterp.z),glm::dvec2(xVelXInterp.y,xVelXInterp.w),particleNormalizedX.x);
             vel.x = glm::mix(xVelYInterp.x,xVelYInterp.y,particleNormalizedX.z);
 
-            particleNormalizedY = (1.0/resolution)*((it->position)-glm::dvec3(cf1y));
+            particleNormalizedY = (1.0/resolution)*(glm::dvec3(it->position)-glm::dvec3(cf1y));
+            assert(particleNormalizedY.x>=0.0);
+            assert(particleNormalizedY.y>=0.0);
+            assert(particleNormalizedY.z>=0.0);
+
             glm::dvec4 yVelXInterp = glm::mix(glm::dvec4(vel1y,vel3y,vel5y,vel7y),glm::dvec4(vel2y,vel4y,vel6y,vel8y),particleNormalizedY.y);
             glm::dvec2 yVelYInterp = glm::mix(glm::dvec2(yVelXInterp.x,yVelXInterp.z),glm::dvec2(yVelXInterp.y,yVelXInterp.w),particleNormalizedY.x);
             vel.y = glm::mix(yVelYInterp.x,yVelYInterp.y,particleNormalizedY.z);
 
-            particleNormalizedZ = (1.0/resolution)*((it->position)-glm::dvec3(cf1z));
+            particleNormalizedZ = (1.0/resolution)*(glm::dvec3(it->position)-glm::dvec3(cf1z));
+            assert(particleNormalizedZ.x>=0.0);
+            assert(particleNormalizedZ.y>=0.0);
+            assert(particleNormalizedZ.z>=0.0);
+
             glm::dvec4 zVelXInterp = glm::mix(glm::dvec4(vel1z,vel3z,vel5z,vel7z),glm::dvec4(vel2z,vel4z,vel6z,vel8z),particleNormalizedZ.y);
             glm::dvec2 zVelYInterp = glm::mix(glm::dvec2(zVelXInterp.x,zVelXInterp.z),glm::dvec2(zVelXInterp.y,zVelXInterp.w),particleNormalizedZ.x);
             vel.z = glm::mix(zVelYInterp.x,zVelYInterp.y,particleNormalizedZ.z);
 
             //it->position = (it->position)+timeStep*vel;
-            it->position = glm::clamp(it->position+timeStep*vel,glm::dvec3(mesh->getAABB().min),glm::dvec3(mesh->getAABB().max));
+            it->position = glm::dvec4(glm::clamp(glm::dvec3(it->position)+timeStep*vel,glm::dvec3(mesh->getAABB().min),glm::dvec3(mesh->getAABB().max)),it->position.w);
         }
         else
         {
-            it->lifeTime = 0.0;
+            it->position.w = 0.0;
         }
     }
     simTime+=1.0/60.0;
+    std::cout<<timer.elapsed()<<std::endl;
 }
 
 void PSFSolver::buildLaplace()
@@ -341,6 +499,18 @@ void PSFSolver::buildLaplace()
         }
     }
     //setInitialVelocityField(velocityField);
+
+    for(unsigned int i=0;i<400000;i++)
+    {
+        glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
+        //pos.y= mesh->getAABB().min.y+0.2f;
+        pos.y+=((rand()%1024)/1024.0-0.5)*0.5;
+        //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
+        pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
+        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.5;
+        //pos = glm::dvec3(0.0);
+        addParticle(Particle(30*60,pos));
+    }
 }
 
 void PSFSolver::buildAdvection()
@@ -508,4 +678,15 @@ void PSFSolver::buildAdvection()
     {
         advection[i] = vortBasisField.transpose()*advection[i];
     }
+}
+
+void PSFSolver::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
+{
+    particles->syncGPU();
+    Particle::setVertexAttribs();
+    Particle::enableVertexAttribs();
+    program->bind();
+    program->uploadMat4("pvm",pvm);
+    program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
+    glDrawArrays(GL_POINTS,0,particles->getNumParticles());
 }

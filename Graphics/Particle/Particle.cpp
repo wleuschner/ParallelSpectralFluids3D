@@ -1,13 +1,22 @@
 #include "Particle.h"
+#include<GL/glew.h>
 
 Particle::Particle()
 {
-    lifeTime = 0.0;
-    position = glm::dvec3(0.0);
+    position = glm::vec4(0.0);
 }
 
-Particle::Particle(double lifeTime,glm::dvec3 position)
+Particle::Particle(float lifeTime,glm::vec3 position)
 {
-    this->lifeTime = lifeTime;
-    this->position = position;
+    this->position = glm::vec4(position,lifeTime);
+}
+
+void Particle::enableVertexAttribs()
+{
+    glEnableVertexAttribArray(0);
+}
+
+void Particle::setVertexAttribs()
+{
+    glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,sizeof(Particle),(void*)0);
 }

@@ -2,6 +2,7 @@
 #define __ABSTRACT_SOLVER_H_
 #include <Eigen/Eigen>
 #include "../Graphics/Model/Model.h"
+#include "../Graphics/ParticleBuffer/ParticleBuffer.h"
 #include "../Graphics/Particle/Particle.h"
 #include "../DEC/decmesh3d.h"
 
@@ -43,7 +44,7 @@ public:
 
     void drawGrid(ShaderProgram* program,const glm::mat4& pvm);
     void drawVelocity(ShaderProgram* program,const glm::mat4& pvm);
-    void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
+    virtual void drawParticles(ShaderProgram* program,const glm::mat4& pvm) = 0;
 
 protected:
     unsigned int maxParticles;
@@ -59,7 +60,6 @@ protected:
     IndexBuffer* gridIndices;
 
     VertexBuffer* velocityVerts;
-    VertexBuffer* particleVerts;
 
     double minRotation;
     double maxRotation;
@@ -89,7 +89,7 @@ protected:
     Eigen::MatrixXd velBasisField;
     Eigen::MatrixXd vortBasisField;
 
-    std::vector<Particle> particles;
+    ParticleBuffer* particles;
 };
 
 #endif

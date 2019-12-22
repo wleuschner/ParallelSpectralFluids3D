@@ -11,6 +11,8 @@ public:
     PSFSolver();
     void integrate();
 
+    void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
+
 protected:
     void buildLaplace();
     void buildAdvection();

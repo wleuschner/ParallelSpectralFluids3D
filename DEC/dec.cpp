@@ -125,7 +125,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     {
                         const_cast<int&>(tripletList[labs(vit->e[i])-1].row())=labs(vit->e[i])-1;
                         const_cast<int&>(tripletList[labs(vit->e[i])-1].col())=labs(vit->e[i])-1;
-                        const_cast<double&>(tripletList[labs(vit->e[i])-1].value())=(glm::length((vit->center-f.center))/areaPrim);
+                        const_cast<double&>(tripletList[labs(vit->e[i])-1].value())=1.0/(glm::length((vit->center-f.center))/areaPrim);
                     }
                     else {
                        std::cout<<f.id<<" "<<f.f1<<" "<<f.f2<<" "<<f.f3<<" "<<f.f4<<std::endl;

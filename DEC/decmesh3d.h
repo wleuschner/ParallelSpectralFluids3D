@@ -63,6 +63,8 @@ public:
     Face3D* getFaces();
     Edge3D* getEdges();
 
+    std::vector<unsigned int>& getSignBitString();
+
     glm::uvec3 getDimensions();
 
     unsigned int getPointIndex(const Vertex3D& v);
@@ -81,6 +83,8 @@ public:
     int getEdgeSignum(int id);
     int getFaceSignum(int id);
     int getVoxelSignum(int id);
+
+    int getFaceSignum(unsigned int vid,unsigned int fidx);
 
     unsigned int getNumPoints();
     unsigned int getNumEdges();
@@ -132,6 +136,7 @@ private:
     VoxelIterator voxelsBegin;
     VoxelIterator voxelsEnd;
 
+    std::vector<unsigned> signBitString;
     std::vector<Vertex3D> points;
     std::vector<Edge3D> edges;
     std::vector<Face3D> faces;

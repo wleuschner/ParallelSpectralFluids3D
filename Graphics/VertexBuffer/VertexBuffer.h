@@ -9,9 +9,11 @@ public:
     VertexBuffer();
     void bind();
     void bindBufferBase(unsigned int id);
+    void reserve(uint32_t num_verts);
     void upload(const std::vector<Vertex>& vertices);
-private:
+
     unsigned int id;
+private:
 };
 
 #endif

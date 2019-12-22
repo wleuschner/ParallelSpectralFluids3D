@@ -44,6 +44,9 @@ public slots:
     void simulate();
 private:
     QTimer updateTimer;
+    cl_context cl_context_id;
+    cl_command_queue cl_queue;
+    cl_device_id device_id;
 
     bool record;
     unsigned int imageNo;
@@ -62,6 +65,7 @@ private:
     glm::mat4 projection;
     ShaderProgram* phongProgram;
     ShaderProgram* lineProgram;
+    ShaderProgram* pointsProgram;
     Light light;
 };
 

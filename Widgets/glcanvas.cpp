@@ -7,6 +7,8 @@
 #include <GL/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <CL/cl.h>
+#include <GL/glx.h>
+#include <CL/cl_gl.h>
 
 GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
 {
@@ -27,7 +29,7 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
     create();
 
     connect(&updateTimer,SIGNAL(timeout()),this,SLOT(simulate()));
-    connect(&updateTimer,SIGNAL(timeout()),this,SLOT(updateGL()));
+    //connect(&updateTimer,SIGNAL(timeout()),this,SLOT(updateGL()));
     updateTimer.setInterval(1000/60);
     updateTimer.stop();
 }
@@ -105,25 +107,43 @@ void GLCanvas::parameterChanged()
 
 void GLCanvas::simulate()
 {
+    updateTimer.stop();
     //MicroProfileOnThreadCreate("Simulate");
     MICROPROFILE_SCOPEI("Canvas","simulate",MP_YELLOW);
-    for(unsigned int i=0;i<2000;i++)
-    {
-        glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
-        //pos.y= mesh->getAABB().min.y+0.2f;
-        pos.y+=((rand()%1024)/1024.0-0.5)*0.5;
-        //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
-        pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
-        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.5;
-        //pos = glm::dvec3(0.0);
-        solver->addParticle(Particle(lifeTime,pos));
-    }
+    setUpdatesEnabled(false);
+    makeCurrent();
     solver->integrate();
+    updateGL();
+    setUpdatesEnabled(true);
+    doneCurrent();
     MicroProfileFlip(nullptr);
+    updateTimer.start();
 }
 
 void GLCanvas::initializeGL()
 {
+    Display* display = glXGetCurrentDisplay();
+    GLXContext gl_context = glXGetCurrentContext();
+
+    // Get platform and device information
+    cl_platform_id platform_id = NULL;
+    cl_uint ret_num_devices;
+    cl_uint ret_num_platforms;
+    cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
+    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_GPU, 1,
+            &device_id, &ret_num_devices);
+
+    cl_context_properties props[] = {
+        CL_CONTEXT_PLATFORM,(cl_context_properties) platform_id,
+        CL_GLX_DISPLAY_KHR,(cl_context_properties) display,
+        CL_GL_CONTEXT_KHR,(cl_context_properties) gl_context,
+        0
+    };
+
+    cl_context_id = clCreateContext(props,1,&device_id,0,0,&ret);
+
+    cl_queue = clCreateCommandQueue(cl_context_id,device_id,0,&ret);
+    if(ret!=CL_SUCCESS) exit(-1);
     glewExperimental = true;
     if(glewInit()!=GLEW_OK)
     {
@@ -138,6 +158,26 @@ void GLCanvas::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_VERTEX_ARRAY);
     glDisable(GL_CULL_FACE);
+    //Load Point Shader
+    Shader pointVert(GL_VERTEX_SHADER,"Res/Effects/Points/points.vert");
+    if(!pointVert.compile())
+    {
+        std::cout<<pointVert.compileLog()<<std::endl;
+    }
+    Shader pointFrag(GL_FRAGMENT_SHADER,"Res/Effects/Points/points.frag");
+    if(!pointFrag.compile())
+    {
+        std::cout<<pointFrag.compileLog()<<std::endl;
+    }
+    pointsProgram = new ShaderProgram();
+    pointsProgram->attachShader(pointVert);
+    pointsProgram->attachShader(pointFrag);
+    if(!pointsProgram->link())
+    {
+        std::cout<<pointsProgram->linkLog()<<std::endl;
+    }
+    pointsProgram->bind();
+
     //Load Line Shader
     Shader lineVert(GL_VERTEX_SHADER,"Res/Effects/Line/line.vert");
     if(!lineVert.compile())
@@ -183,10 +223,10 @@ void GLCanvas::initializeGL()
     Vertex::setVertexAttribs();
     Vertex::enableVertexAttribs();
 
-    glPointSize(1.0f);
+    glPointSize(2.0f);
 
     psfSolver = new PSFSolver();
-    psfSolverGPU = new PSFSolverGPU();
+    psfSolverGPU = new PSFSolverGPU(cl_context_id,device_id,cl_queue);
     solver = psfSolverGPU;
 }
 
@@ -220,9 +260,9 @@ void GLCanvas::paintGL()
             glEnable(GL_BLEND);
             glBlendFunc(GL_ONE,GL_ONE);
 
-            Vertex::setVertexAttribs();
-            Vertex::enableVertexAttribs();
-            solver->drawParticles(lineProgram,pvm);
+            Particle::setVertexAttribs();
+            Particle::enableVertexAttribs();
+            solver->drawParticles(pointsProgram,pvm);
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
@@ -304,7 +344,6 @@ void GLCanvas::keyPressEvent(QKeyEvent *event)
         break;
     case Qt::Key_Plus:
         simulate();
-        updateGL();
         break;
     case Qt::Key_Space:
         if(updateTimer.isActive())
@@ -328,7 +367,7 @@ void GLCanvas::keyPressEvent(QKeyEvent *event)
         }
         break;
     }
-    update();
+    simulate();
 }
 void GLCanvas::mouseMoveEvent(QMouseEvent *event)
 {

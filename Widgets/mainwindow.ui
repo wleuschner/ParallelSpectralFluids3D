@@ -37,6 +37,9 @@
           </item>
           <item>
            <widget class="QSpinBox" name="spinNumEigenFunctions">
+            <property name="maximum">
+             <number>999</number>
+            </property>
             <property name="value">
              <number>16</number>
             </property>

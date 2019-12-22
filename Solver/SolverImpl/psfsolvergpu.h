@@ -4,18 +4,31 @@
 #include <viennacl/vector.hpp>
 #include <viennacl/matrix.hpp>
 #include <viennacl/compressed_matrix.hpp>
+#include <viennacl/ocl/backend.hpp>
 #include <CL/cl.h>
 
 class PSFSolverGPU : public AbstractSolver
 {
 public:
-    PSFSolverGPU();
+    PSFSolverGPU(cl_context context,cl_device_id device,cl_command_queue queue);
     void integrate();
+
+    void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
 protected:
     void buildLaplace();
     void buildAdvection();
 private:
     cl_context cl_context_id;
+    cl_command_queue cl_queue;
+    cl_device_id device_id;
+    cl_program program;
+    cl_kernel kernel;
+
+    cl_mem signBitStringHandle;
+
+    viennacl::ocl::program vcl_prog_psf;
+    viennacl::ocl::kernel advection_kernel;
+    cl_mem particlesBuffer;
 
     viennacl::compressed_matrix<double> vcl_curl;
 
@@ -31,8 +44,6 @@ private:
     viennacl::vector<double> vcl_basisCoeff;
     viennacl::matrix<double> vcl_velBasisField;
     viennacl::matrix<double> vcl_vortBasisField;
-
-    std::vector<Particle> particles;
 };
 
 #endif
