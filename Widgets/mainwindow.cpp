@@ -21,7 +21,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->spinViscosity,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeViscosity(double)));
     connect(ui->spinTimestep,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeTimestep(double)));
     connect(ui->spinLifeTime,SIGNAL(valueChanged(double)),ui->canvas,SLOT(changeLifeTime(double)));
+    connect(ui->spinNumParticles,SIGNAL(valueChanged(int)),ui->canvas,SLOT(changeNumParticles(int)));
     connect(ui->chkGravity,SIGNAL(toggled(bool)),ui->canvas,SLOT(changeGravity(bool)));
+    connect(ui->chkGPU,SIGNAL(toggled(bool)),ui->canvas,SLOT(changeGPU(bool)));
 
     mesh = NULL;
 }

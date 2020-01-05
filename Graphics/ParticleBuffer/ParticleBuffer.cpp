@@ -27,7 +27,10 @@ void ParticleBuffer::clear()
 void ParticleBuffer::reserve(unsigned int num_verts)
 {
     bind();
-    glBufferData(GL_ARRAY_BUFFER,num_verts*sizeof(Particle),0,GL_STREAM_DRAW);
+    Particle* initData = (Particle*)malloc(num_verts*sizeof(Particle));
+    memset(initData,0,num_verts*sizeof(Particle));
+    glBufferData(GL_ARRAY_BUFFER,num_verts*sizeof(Particle),initData,GL_STREAM_DRAW);
+    free(initData);
     particles.resize(num_verts);
 }
 

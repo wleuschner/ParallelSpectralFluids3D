@@ -18,10 +18,15 @@ public:
     void setInitialVorticityField(const Eigen::VectorXd& field);
 
     void setNumberEigenFunctions(unsigned int n);
+    void changeNumParticles(unsigned int n);
     void setResolution(double res);
     void setViscosity(double visc);
     void setTimestep(double timestep);
     void setGravityActive(bool state);
+    void setLifeTime(float lt);
+
+    void beginBenchmark();
+    void endBenchmark();
 
     Model* getMesh();
     DECMesh3D& getDECMesh();
@@ -64,6 +69,7 @@ protected:
     double minRotation;
     double maxRotation;
 
+    float lifeTime;
     unsigned int nEigenFunctions;
     double resolution;
     double timeStep;

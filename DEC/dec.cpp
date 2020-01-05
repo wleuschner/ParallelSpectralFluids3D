@@ -143,6 +143,8 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
 
         for(VoxelIterator vit=mesh.getVoxelIteratorBegin();vit<mesh.getVoxelIteratorEnd();vit++)
         {
+            if(vit->inside==GridState::INSIDE)
+            {
                 for(unsigned int i=0;i<6;i++)
                 {
                     Face3D f = mesh.getFace(vit->f[i]);
@@ -185,11 +187,12 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     const_cast<int&>(tripletList[labs(vit->f[i])-1].col())=labs(vit->f[i])-1;
                     const_cast<double&>(tripletList[labs(vit->f[i])-1].value())=((glm::length(vit->center-f.center))/areaPrim);
                 }
+            }
         }
         h.setFromTriplets(tripletList.begin(),tripletList.end());
     }
 
-    h.setIdentity();
+    //h.setIdentity();
     return h;
 }
 

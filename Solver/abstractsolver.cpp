@@ -5,7 +5,7 @@
 AbstractSolver::AbstractSolver()
 {
     //maxParticles=1000;
-    maxParticles=400000;
+    maxParticles=2000000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
@@ -15,6 +15,7 @@ AbstractSolver::AbstractSolver()
     nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
+    lifeTime = 10.0*60.0;
 
     particles = new ParticleBuffer();
     particles->reserve(maxParticles);
@@ -111,6 +112,17 @@ void AbstractSolver::setGravityActive(bool state)
     gravityActive = state;
 }
 
+void AbstractSolver::changeNumParticles(unsigned int n)
+{
+    maxParticles = n;
+    clearParticles();
+}
+
+void AbstractSolver::setLifeTime(float lt)
+{
+    lifeTime = lt*60.0;
+}
+
 Model* AbstractSolver::getMesh()
 {
     return mesh;
@@ -174,6 +186,16 @@ double AbstractSolver::getMinVorticity()
 const std::vector<Particle>& AbstractSolver::getParticles()
 {
     return particles->getParticles();
+}
+
+void AbstractSolver::beginBenchmark()
+{
+
+}
+
+void AbstractSolver::endBenchmark()
+{
+
 }
 
 void AbstractSolver::clearParticles()

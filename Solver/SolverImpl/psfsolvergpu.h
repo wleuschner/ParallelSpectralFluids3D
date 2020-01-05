@@ -18,11 +18,14 @@ protected:
     void buildLaplace();
     void buildAdvection();
 private:
+    uint32_t refreshParticles;
     cl_context cl_context_id;
     cl_command_queue cl_queue;
     cl_device_id device_id;
     cl_program program;
-    cl_kernel kernel;
+    cl_kernel interp_kernel;
+    cl_kernel visc_kernel;
+    cl_kernel vel_update_kernel;
 
     cl_mem signBitStringHandle;
 
@@ -39,6 +42,10 @@ private:
 
     std::vector<viennacl::matrix<double>> vcl_advection;
 
+    viennacl::scalar<double> vcl_e1;
+    viennacl::scalar<double> vcl_e2;
+    viennacl::vector<double> vcl_velocity;
+    viennacl::scalar<double> vcl_timestep;
     viennacl::vector<double> vcl_gravity;
     viennacl::vector<double> vcl_eigenValues;
     viennacl::vector<double> vcl_basisCoeff;

@@ -30,6 +30,8 @@ protected:
 signals:
 
 public slots:
+    void startBenchmark();
+    void stopBenchmark();
     void showMesh(bool state);
     void showVoxel(bool state);
     void showVelocity(bool state);
@@ -39,7 +41,9 @@ public slots:
     void changeViscosity(double visc);
     void changeTimestep(double val);
     void changeLifeTime(double val);
+    void changeNumParticles(int val);
     void changeGravity(bool gravity);
+    void changeGPU(bool gpu);
     void parameterChanged();
     void simulate();
 private:
@@ -47,6 +51,10 @@ private:
     cl_context cl_context_id;
     cl_command_queue cl_queue;
     cl_device_id device_id;
+
+    bool benchmark;
+    unsigned int frameNoBenchmark;
+    unsigned int maxFrameNoBenchmark;
 
     bool record;
     unsigned int imageNo;

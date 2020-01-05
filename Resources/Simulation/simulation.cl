@@ -27,7 +27,6 @@ int getFaceSignum(uint vid,uint fidx,__global const uint* signBitString)
     return signBitString[idx]>>(offset*6+(fidx))&1?1:-1;
 }
 
-
 __attribute__((reqd_work_group_size(1024, 1, 1)))
 __kernel void advection(
                         __global float4* inParticles,
@@ -38,10 +37,22 @@ __kernel void advection(
                         const float4 aabb_max,
                         const float4 aabb_extent,
                         const float resolution,
-                        const float timestep)
+                        const float timestep,
+                        const uint3 randoms,
+                        const float lifeTime)
 {
 
     uint idx = get_global_id(0);
+
+    uint seed = randoms.x * idx;
+    uint t = seed ^ (seed << 11);
+    uint rand1 = seed >> 16;
+    seed = (seed * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    uint rand2 = seed >> 16;
+    seed = (seed * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    uint rand3 = seed >> 16;
+    seed = (seed * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    uint rand4 = seed >> 16;
 
     int yOfs = floor((aabb_min.y+aabb_extent.y+inParticles[idx].y)/resolution);
     int xOfs = floor((aabb_min.x+aabb_extent.x+inParticles[idx].x)/resolution);
@@ -174,5 +185,31 @@ __kernel void advection(
     float2 zVelYInterp = mix((float2)(zVelXInterp.x,zVelXInterp.z),(float2)(zVelXInterp.y,zVelXInterp.w),clamp(particleNormalizedZ.x,0.0f,1.0f));
     vel.z = mix(zVelYInterp.x,zVelYInterp.y,clamp(particleNormalizedZ.z,0.0f,1.0f));
 
+    float4 newPart;
+    float4 aabb_center = aabb_min+0.5*(aabb_max-aabb_min);
+    newPart.x = ((rand1%1024)/1024.0-0.5)*0.5;
+    newPart.y = aabb_min.y+0.2f;
+    //newPart.y =((rand4%1024)/1024.0-0.5)*0.5;
+    newPart.z = -aabb_center.z+((rand3%1024)/1024.0-0.5)*1.0;
+    //newPart.z = ((rand3%1024)/1024.0-0.5)*0.5;
+    newPart.w = lifeTime*((rand2%1024)/1024.0);
+    float4 oldPart = inParticles[idx];
+
+    inParticles[idx] = mix(oldPart,newPart,convert_float(inParticles[idx].w<0.0));
+
     inParticles[idx].xyz = (clamp(inParticles[idx].xyz+timestep*vel,aabb_min.xyz,aabb_max.xyz));
+    inParticles[idx].w -= 1.0;
+}
+
+__kernel void normalization_viscocity_gravity(__global double* e1,__global double* e2,__global double* basisCoeff,__global double* eigenValues,__global double* gravity,double visc,double timestep,double gravityOn)
+{
+    uint idx = get_global_id(0);
+    basisCoeff[idx] *= sqrt(e1[0]/e2[0]);
+    basisCoeff[idx] *= exp(-visc*eigenValues[idx]*timestep);
+    basisCoeff[idx] += timestep*gravity[idx]*gravityOn;
+}
+
+__kernel void update_vel(__global double* basisCoeff,__global double* vel,double timestep,uint index)
+{
+    basisCoeff[index] += timestep*vel[0];
 }

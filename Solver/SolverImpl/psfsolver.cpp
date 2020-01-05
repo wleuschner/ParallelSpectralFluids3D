@@ -337,7 +337,7 @@ void PSFSolver::buildLaplace()
     //std::cout<<Eigen::MatrixXd(mat3)<<std::endl;
     //std::cout<<Eigen::MatrixXd(mat4)<<std::endl;
 
-    Eigen::SparseMatrix<double> mat = -1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
+    Eigen::SparseMatrix<double> mat = 1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     //std::cout<<Eigen::MatrixXd(mat)<<std::endl;
     //exit(1);
 
@@ -371,7 +371,7 @@ void PSFSolver::buildLaplace()
             Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
-            int nconv = solver.compute(1000,1e-6,Spectra::WHICH_LM);
+            int nconv = solver.compute(1000,1e-10,Spectra::WHICH_LM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
 
@@ -380,14 +380,17 @@ void PSFSolver::buildLaplace()
                 bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
-                    if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
+                    Eigen::VectorXd backProjection = mat*tempEigenVectors.col(i);
+                    if(backProjection.isApprox(tempEigenValues(i)*tempEigenVectors.col(i),1))
+                    //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
                         bool doubleEv = false;
                         for(unsigned int j=0;j<foundEigenValues;j++)
                         {
-                            if(abs(velBasisField.col(j).dot(tempEigenVectors.col(i))-1.0)<std::numeric_limits<double>::epsilon())
+                            if(fabs(eigenValues(j)-tempEigenValues(i))<=std::numeric_limits<float>::epsilon())
+                            //if(velBasisField.col(j).isApprox(tempEigenVectors.col(i)))
                             {
-                                std::cout<<"Already Inside"<<std::endl;
+                                std::cout<<"Already Inside "<<tempEigenValues(i)<<std::endl;
                                 doubleEv = true;
                                 break;
                             }
@@ -397,7 +400,7 @@ void PSFSolver::buildLaplace()
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
                         //if(tempEigenValues(i)!=0.0)
                         {
-                            omega = tempEigenValues(i);
+                            //omega = tempEigenValues(i);
                             onlyZero = false;
                         }
                         eigenValues(foundEigenValues) = tempEigenValues(i);
@@ -407,17 +410,17 @@ void PSFSolver::buildLaplace()
                     }
                     //else
                     {
-                        std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
+                        //std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
                     }
                 }
                 if(onlyZero)
-                  omega+=1e-6;
+                  omega+=0.1;
                 decompositionDone = true;
             }
             else
             {
                 std::cout<<"Nothing Found"<<std::endl;
-                omega+=1e-6;
+                omega+=0.1;
             }
         }
         catch(std::runtime_error e)

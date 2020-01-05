@@ -22,6 +22,10 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
     lifeTime = 30*60.0;
     imageNo = 0;
     record = false;
+    benchmark = false;
+    maxFrameNoBenchmark = 1000;
+    frameNoBenchmark = 0;
+
     QGLFormat format = QGLFormat::defaultFormat();
     format.setProfile(QGLFormat::CoreProfile);
     format.setVersion(4,5);
@@ -32,6 +36,17 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
     //connect(&updateTimer,SIGNAL(timeout()),this,SLOT(updateGL()));
     updateTimer.setInterval(1000/60);
     updateTimer.stop();
+}
+
+void GLCanvas::startBenchmark()
+{
+    benchmark = true;
+    frameNoBenchmark = 0;
+}
+
+void GLCanvas::stopBenchmark()
+{
+    benchmark = false;
 }
 
 void GLCanvas::setMesh(Model* mesh)
@@ -74,6 +89,13 @@ void GLCanvas::changeNumEigenfunctions(int n)
     solver->setNumberEigenFunctions(n);
 }
 
+void GLCanvas::changeNumParticles(int n)
+{
+    updateTimer.stop();
+    solver->changeNumParticles(n);
+    updateTimer.start();
+}
+
 void GLCanvas::changeResolution(double resolution)
 {
     updateTimer.stop();
@@ -92,12 +114,25 @@ void GLCanvas::changeTimestep(double val)
 
 void GLCanvas::changeLifeTime(double val)
 {
-    lifeTime = val;
+    solver->setLifeTime(val);
 }
 
 void GLCanvas::changeGravity(bool gravity)
 {
     solver->setGravityActive(gravity);
+}
+
+void GLCanvas::changeGPU(bool gpu)
+{
+    if(gpu==true)
+    {
+        solver = psfSolverGPU;
+    }
+    else
+    {
+        solver = psfSolver;
+    }
+    solver->setMesh(mesh);
 }
 
 void GLCanvas::parameterChanged()
@@ -227,7 +262,7 @@ void GLCanvas::initializeGL()
 
     psfSolver = new PSFSolver();
     psfSolverGPU = new PSFSolverGPU(cl_context_id,device_id,cl_queue);
-    solver = psfSolverGPU;
+    solver = psfSolver;
 }
 
 void GLCanvas::paintGL()
