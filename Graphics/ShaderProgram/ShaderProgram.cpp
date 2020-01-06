@@ -175,5 +175,5 @@ glm::ivec3 ShaderProgram::getMaxWorkGroups()
 
 void ShaderProgram::dispatch(unsigned int gwx,unsigned int gwy,unsigned int gwz,unsigned int lwx,unsigned int lwy,unsigned int lwz)
 {
-    glDispatchComputeGroupSizeARB(gwx,gwy,gwz,lwx,lwy,lwz);
+    glDispatchCompute(gwx,gwy,gwz);
 }

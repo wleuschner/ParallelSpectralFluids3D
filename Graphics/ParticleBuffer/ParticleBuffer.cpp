@@ -17,6 +17,11 @@ void ParticleBuffer::bind()
     glBindBuffer(GL_ARRAY_BUFFER,id);
 }
 
+void ParticleBuffer::bindCompute(unsigned int idx)
+{
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER,idx,id);
+}
+
 void ParticleBuffer::clear()
 {
     glDeleteBuffers(1,&id);

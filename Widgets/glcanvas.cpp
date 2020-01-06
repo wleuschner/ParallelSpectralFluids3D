@@ -193,6 +193,7 @@ void GLCanvas::initializeGL()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_VERTEX_ARRAY);
     glDisable(GL_CULL_FACE);
+
     //Load Point Shader
     Shader pointVert(GL_VERTEX_SHADER,"Res/Effects/Points/points.vert");
     if(!pointVert.compile())
@@ -233,6 +234,26 @@ void GLCanvas::initializeGL()
     }
     lineProgram->bind();
 
+    //Load Volume Shader
+    Shader volumeVert(GL_VERTEX_SHADER,"Res/Effects/Volume/volume.vert");
+    if(!volumeVert.compile())
+    {
+        std::cout<<volumeVert.compileLog()<<std::endl;
+    }
+    Shader volumeFrag(GL_FRAGMENT_SHADER,"Res/Effects/Volume/volume.frag");
+    if(!volumeFrag.compile())
+    {
+        std::cout<<volumeFrag.compileLog()<<std::endl;
+    }
+    volumeProgram = new ShaderProgram();
+    volumeProgram->attachShader(volumeVert);
+    volumeProgram->attachShader(volumeFrag);
+    if(!volumeProgram->link())
+    {
+        std::cout<<volumeProgram->linkLog()<<std::endl;
+    }
+    volumeProgram->bind();
+
     //Load Phong Shader
     Shader phongVert(GL_VERTEX_SHADER,"Res/Effects/Phong/phong.vert");
     if(!phongVert.compile())
@@ -262,7 +283,7 @@ void GLCanvas::initializeGL()
 
     psfSolver = new PSFSolver();
     psfSolverGPU = new PSFSolverGPU(cl_context_id,device_id,cl_queue);
-    solver = psfSolver;
+    solver = psfSolverGPU;
 }
 
 void GLCanvas::paintGL()
@@ -277,7 +298,7 @@ void GLCanvas::paintGL()
         glm::mat4 model = mesh->getModelMat();
         glm::mat4 modelView = view*mesh->getModelMat();
         glm::mat4 pvm = projection*modelView;
-
+/*
         if(voxelVisible)
         {
             solver->drawGrid(lineProgram,pvm);
@@ -286,7 +307,7 @@ void GLCanvas::paintGL()
         if(velocityVisible)
         {
             solver->drawVelocity(lineProgram,pvm);
-        }
+        }*/
 
         if(particleVisible)
         {
@@ -297,12 +318,16 @@ void GLCanvas::paintGL()
 
             Particle::setVertexAttribs();
             Particle::enableVertexAttribs();
-            solver->drawParticles(pointsProgram,pvm);
+
+            solver->view_mat = camera.getView();
+            solver->camera_position = camera.getPosition();
+            solver->drawParticles(volumeProgram,pvm);
+            //solver->drawParticles(pointsProgram,pvm);
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
         }
-
+/*
         if(meshVisible)
         {
             glDisable(GL_CULL_FACE);
@@ -329,7 +354,7 @@ void GLCanvas::paintGL()
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
-        }
+        }*/
 
     }
     if(record)
@@ -341,6 +366,7 @@ void GLCanvas::paintGL()
 
 void GLCanvas::resizeGL(int w, int h)
 {
+    psfSolverGPU->viewport_size = glm::vec4(0.0,0.0,w,h);
     projection = glm::perspectiveFovRH(45.0f,(float)w,(float)h,0.1f,100.0f);
 }
 

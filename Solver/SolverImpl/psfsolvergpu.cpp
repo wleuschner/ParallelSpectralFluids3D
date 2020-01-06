@@ -66,6 +66,23 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         std::cout<<"Could not build kernel"<<std::endl;
         exit(-1);
     }
+
+    //Load Volume Compute Shader
+    Shader vol_compute(GL_COMPUTE_SHADER,"Res/Volume/volume.comp");
+    if(!vol_compute.compile())
+    {
+        std::cout<<vol_compute.compileLog()<<std::endl;
+        exit(-1);
+    }
+
+    volumeComputeShader = new ShaderProgram();
+    volumeComputeShader->attachShader(vol_compute);
+    if(!volumeComputeShader->link())
+    {
+        std::cout<<volumeComputeShader->linkLog()<<std::endl;
+        exit(-1);
+    }
+
     refreshParticles = 60*10;
 }
 
@@ -521,12 +538,36 @@ void PSFSolverGPU::buildAdvection()
 void PSFSolverGPU::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
 {
     glEnableClientState(GL_VERTEX_ARRAY);
-    particles->bind();
+    volumeTexture->clearImage();
+    volumeComputeShader->bind();
+    volumeTexture->bindCompute(0);
+    particles->bindCompute(1);
+    volumeComputeShader->uploadUnsignedInt("volumeTexture",0);
+    volumeComputeShader->dispatch(maxParticles,1,1,1024,1,1);
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+    Particle::setVertexAttribs();
+    Particle::enableVertexAttribs();
+    glBindBuffer(GL_ARRAY_BUFFER,fullscreenVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,fullscreenIBO);
+    volumeTexture->bind(0);
+    program->bind();
+    program->uploadVec4("viewport_size",viewport_size);
+    program->uploadVec3("camera_position",camera_position);
+    program->uploadMat4("view_mat",view_mat);
+    program->uploadScalar("step_size",0.1);
+    program->uploadVec3("aabb_min",mesh->getAABB().min);
+    program->uploadVec3("aabb_max",mesh->getAABB().max);
+    program->uploadUnsignedInt("volumeTexture",0);
+    program->uploadMat4("pvm",pvm);
+    glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+
+    /*particles->bind();
     Vertex::setVertexAttribs();
     Vertex::enableVertexAttribs();
     program->bind();
     program->uploadMat4("pvm",pvm);
     program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
     program->uploadScalar("lifeTime",lifeTime);
-    glDrawArrays(GL_POINTS,0,maxParticles);
+    glDrawArrays(GL_POINTS,0,maxParticles);*/
 }

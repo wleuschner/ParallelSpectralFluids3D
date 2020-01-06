@@ -71,6 +71,7 @@ private:
     Model* mesh;
     unsigned int vao;
     glm::mat4 projection;
+    ShaderProgram* volumeProgram;
     ShaderProgram* phongProgram;
     ShaderProgram* lineProgram;
     ShaderProgram* pointsProgram;

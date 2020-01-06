@@ -4,6 +4,7 @@
 #include "../Graphics/Model/Model.h"
 #include "../Graphics/ParticleBuffer/ParticleBuffer.h"
 #include "../Graphics/Particle/Particle.h"
+#include "../Graphics/Texture3D/Texture3D.h"
 #include "../DEC/decmesh3d.h"
 
 class AbstractSolver
@@ -51,6 +52,10 @@ public:
     void drawVelocity(ShaderProgram* program,const glm::mat4& pvm);
     virtual void drawParticles(ShaderProgram* program,const glm::mat4& pvm) = 0;
 
+    glm::vec4 viewport_size;
+    glm::vec3 camera_position;
+    glm::mat4 view_mat;
+
 protected:
     unsigned int maxParticles;
     unsigned int particlePointer;
@@ -64,6 +69,7 @@ protected:
     VertexBuffer* gridVerts;
     IndexBuffer* gridIndices;
 
+    Texture3D* volumeTexture;
     VertexBuffer* velocityVerts;
 
     double minRotation;
@@ -79,6 +85,9 @@ protected:
     Model* mesh;
 
     bool gravityActive;
+
+    unsigned int fullscreenVBO;
+    unsigned int fullscreenIBO;
 
     Eigen::SparseMatrix<double> curl;
 

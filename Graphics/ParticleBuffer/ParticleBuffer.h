@@ -10,6 +10,7 @@ public:
     ParticleBuffer();
     ~ParticleBuffer();
     void bind();
+    void bindCompute(unsigned int idx);
     void syncGPU();
     void reserve(unsigned int numParts);
     void clear();

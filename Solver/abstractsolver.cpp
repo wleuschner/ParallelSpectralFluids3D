@@ -1,5 +1,5 @@
 #include"abstractsolver.h"
-#include<GL/gl.h>
+#include<GL/glew.h>
 #include<iostream>
 
 AbstractSolver::AbstractSolver()
@@ -9,6 +9,7 @@ AbstractSolver::AbstractSolver()
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
+    volumeTexture = NULL;
     mesh = NULL;
     gravityActive = false;
     resolution = 0.2;
@@ -16,6 +17,15 @@ AbstractSolver::AbstractSolver()
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
     lifeTime = 10.0*60.0;
+
+    glm::vec4 verts[] = {glm::vec4(-1.0,-1.0,0.0,0.0),glm::vec4(-1.0,1.0,0.0,0.0),glm::vec4(1.0,1.0,0.0,0.0),glm::vec4(1.0,-1.0,0.0,0.0)};
+    unsigned int indices[] = {0,1,2,2,0,3};
+    glGenBuffers(1,&fullscreenVBO);
+    glGenBuffers(1,&fullscreenIBO);
+    glBindBuffer(GL_ARRAY_BUFFER,fullscreenVBO);
+    glBufferData(GL_ARRAY_BUFFER,4*sizeof(glm::vec4),verts,GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,fullscreenIBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,6*sizeof(unsigned int),indices,GL_STATIC_DRAW);
 
     particles = new ParticleBuffer();
     particles->reserve(maxParticles);
@@ -30,7 +40,11 @@ void AbstractSolver::setMesh(Model* mesh)
     }
     this->mesh = mesh;
     decMesh = mesh->voxelize(resolution);
-
+    if(volumeTexture!=NULL)
+    {
+        volumeTexture->destroy();
+        delete volumeTexture;
+    }
     if(gridVerts!=NULL)
     {
         delete gridVerts;
@@ -43,7 +57,10 @@ void AbstractSolver::setMesh(Model* mesh)
     {
         delete velocityVerts;
     }
-    gridVerts = new VertexBuffer();
+    glm::uvec3 dims = decMesh.getDimensions();
+    volumeTexture = new Texture3D();
+    volumeTexture->bind(0);
+    volumeTexture->createRenderImage(2,2,2);
     gridIndices = new IndexBuffer();
     velocityVerts = new VertexBuffer();
     std::vector<unsigned int> indices(2*decMesh.getNumEdges());
@@ -90,8 +107,16 @@ void AbstractSolver::setNumberEigenFunctions(unsigned int n)
 void AbstractSolver::setResolution(double res)
 {
     clearParticles();
+    if(volumeTexture!=NULL)
+    {
+        volumeTexture->destroy();
+        delete volumeTexture;
+    }
     this->resolution = res;
     decMesh = mesh->voxelize(res);
+    glm::uvec3 dims = decMesh.getDimensions();
+    volumeTexture = new Texture3D();
+    volumeTexture->createRenderImage(dims.x*4,dims.y*4,dims.z*4);
     buildLaplace();
     buildEigenFunctions();
     buildAdvection();

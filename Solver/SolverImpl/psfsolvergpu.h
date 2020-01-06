@@ -18,6 +18,8 @@ protected:
     void buildLaplace();
     void buildAdvection();
 private:
+    ShaderProgram* volumeComputeShader;
+
     uint32_t refreshParticles;
     cl_context cl_context_id;
     cl_command_queue cl_queue;
