@@ -14,6 +14,8 @@ public:
     void integrate();
 
     void drawParticles(ShaderProgram* program,const glm::mat4& pvm);
+    Light light;
+
 protected:
     void buildLaplace();
     void buildAdvection();

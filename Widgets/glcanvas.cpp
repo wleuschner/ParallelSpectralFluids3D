@@ -191,7 +191,6 @@ void GLCanvas::initializeGL()
     glClearDepth(1.0f);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_VERTEX_ARRAY);
     glDisable(GL_CULL_FACE);
 
     //Load Point Shader
@@ -276,13 +275,11 @@ void GLCanvas::initializeGL()
 
     light = Light(glm::vec3(20.0,20.0,0.0));
 
-    Vertex::setVertexAttribs();
-    Vertex::enableVertexAttribs();
-
     glPointSize(2.0f);
 
     psfSolver = new PSFSolver();
     psfSolverGPU = new PSFSolverGPU(cl_context_id,device_id,cl_queue);
+    psfSolverGPU->light = light;
     solver = psfSolverGPU;
 }
 
@@ -298,7 +295,7 @@ void GLCanvas::paintGL()
         glm::mat4 model = mesh->getModelMat();
         glm::mat4 modelView = view*mesh->getModelMat();
         glm::mat4 pvm = projection*modelView;
-/*
+
         if(voxelVisible)
         {
             solver->drawGrid(lineProgram,pvm);
@@ -307,7 +304,7 @@ void GLCanvas::paintGL()
         if(velocityVisible)
         {
             solver->drawVelocity(lineProgram,pvm);
-        }*/
+        }
 
         if(particleVisible)
         {
@@ -327,7 +324,7 @@ void GLCanvas::paintGL()
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
         }
-/*
+
         if(meshVisible)
         {
             glDisable(GL_CULL_FACE);
@@ -354,7 +351,7 @@ void GLCanvas::paintGL()
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
-        }*/
+        }
 
     }
     if(record)

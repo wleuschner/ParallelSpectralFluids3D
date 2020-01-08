@@ -5,14 +5,14 @@
 AbstractSolver::AbstractSolver()
 {
     //maxParticles=1000;
-    maxParticles=2000000;
+    maxParticles=1000000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
     volumeTexture = NULL;
     mesh = NULL;
     gravityActive = false;
-    resolution = 0.2;
+    resolution = 0.05;
     nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
@@ -57,10 +57,14 @@ void AbstractSolver::setMesh(Model* mesh)
     {
         delete velocityVerts;
     }
+
     glm::uvec3 dims = decMesh.getDimensions();
+
     volumeTexture = new Texture3D();
     volumeTexture->bind(0);
-    volumeTexture->createRenderImage(2,2,2);
+    volumeTexture->createRenderImage(128,128,128);
+
+    gridVerts = new VertexBuffer();
     gridIndices = new IndexBuffer();
     velocityVerts = new VertexBuffer();
     std::vector<unsigned int> indices(2*decMesh.getNumEdges());

@@ -1,6 +1,8 @@
 #include"ParticleBuffer.h"
 #include<GL/glew.h>
 #include<cmath>
+#include<iostream>
+#include<cstdlib>
 
 ParticleBuffer::ParticleBuffer()
 {
@@ -19,6 +21,7 @@ void ParticleBuffer::bind()
 
 void ParticleBuffer::bindCompute(unsigned int idx)
 {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER,id);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER,idx,id);
 }
 

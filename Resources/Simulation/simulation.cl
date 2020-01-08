@@ -183,14 +183,14 @@ __kernel void advection(
 
     float4 zVelXInterp = mix((float4)(vel1z,vel3z,vel5z,vel7z),(float4)(vel2z,vel4z,vel6z,vel8z),clamp(particleNormalizedZ.y,0.0f,1.0f));
     float2 zVelYInterp = mix((float2)(zVelXInterp.x,zVelXInterp.z),(float2)(zVelXInterp.y,zVelXInterp.w),clamp(particleNormalizedZ.x,0.0f,1.0f));
-    vel.z = mix(zVelYInterp.x,zVelYInterp.y,clamp(particleNormalizedZ.z,0.0f,1.0f));
+    vel.z = -mix(zVelYInterp.x,zVelYInterp.y,clamp(particleNormalizedZ.z,0.0f,1.0f));
 
     float4 newPart;
     float4 aabb_center = aabb_min+0.5*(aabb_max-aabb_min);
-    newPart.x = ((rand1%1024)/1024.0-0.5)*0.5;
+    newPart.x = ((rand1%1024)/1024.0-0.5)*0.25;
     newPart.y = aabb_min.y+0.2f;
     //newPart.y =((rand4%1024)/1024.0-0.5)*0.5;
-    newPart.z = -aabb_center.z+((rand3%1024)/1024.0-0.5)*1.0;
+    newPart.z = -aabb_center.z+((rand3%1024)/1024.0-0.5)*0.25;
     //newPart.z = ((rand3%1024)/1024.0-0.5)*0.5;
     newPart.w = lifeTime*((rand2%1024)/1024.0);
     float4 oldPart = inParticles[idx];

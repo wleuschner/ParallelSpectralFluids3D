@@ -74,6 +74,8 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         std::cout<<vol_compute.compileLog()<<std::endl;
         exit(-1);
     }
+    std::cout<<vol_compute.compileLog()<<std::endl;
+
 
     volumeComputeShader = new ShaderProgram();
     volumeComputeShader->attachShader(vol_compute);
@@ -82,6 +84,7 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         std::cout<<volumeComputeShader->linkLog()<<std::endl;
         exit(-1);
     }
+    std::cout<<volumeComputeShader->linkLog()<<std::endl;
 
     refreshParticles = 60*10;
 }
@@ -218,7 +221,7 @@ void PSFSolverGPU::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            //mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
         }
     }
     //mat.pruned();
@@ -236,7 +239,7 @@ void PSFSolverGPU::buildLaplace()
             Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
-            int nconv = solver.compute(1000,1e-10,Spectra::WHICH_LM);
+            int nconv = solver.compute(1000,1e-10,Spectra::WHICH_SM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
 
@@ -250,6 +253,7 @@ void PSFSolverGPU::buildLaplace()
                     //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
                         bool doubleEv = false;
+                        /*
                         for(unsigned int j=0;j<foundEigenValues;j++)
                         {
                             //if(fabs(eigenValues(j)-tempEigenValues(i))<=std::numeric_limits<float>::epsilon())
@@ -259,7 +263,7 @@ void PSFSolverGPU::buildLaplace()
                                 doubleEv = true;
                                 break;
                             }
-                        }
+                        }*/
                         if(!doubleEv)
                         {
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
@@ -370,8 +374,8 @@ void PSFSolverGPU::buildLaplace()
             {
                 AABB aabb = mesh->getAABB();
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
-                   it->center.y<aabb.min.y+0.4 && abs(it->center.x)<0.4 && abs(it->center.z)<0.4)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*50.0;
+                   it->center.y<aabb.min.y+0.8/* && abs(it->center.x)<0.4 && abs(it->center.z)<0.4*/)
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.10;
 
             }
         }
@@ -425,7 +429,7 @@ void PSFSolverGPU::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
-    double scale = ((decMesh.resolution/2)*(decMesh.resolution/2));
+    double scale = 0.5*0.5;//((decMesh.resolution/2)*(decMesh.resolution/2));
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)
@@ -502,18 +506,18 @@ void PSFSolverGPU::buildAdvection()
 
 
                     wedges[i](ie1,j) += (scale)*(vel1a*vel4b-vel1b*vel4a)*(glm::dot(glm::cross(f1.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie2,j) += (scale)*(vel1a*vel6b-vel1b*vel6a)*(glm::dot(glm::cross(f1.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie3,j) += (scale)*(vel1a*vel3b-vel1b*vel3a)*(glm::dot(glm::cross(f1.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie2,j) += (scale)*(vel6a*vel1b-vel6b*vel1a)*(glm::dot(glm::cross(f6.normal,f1.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie3,j) += (scale)*(vel3a*vel1b-vel3b*vel1a)*(glm::dot(glm::cross(f3.normal,f1.normal),glm::dvec3(1.0,1.0,1.0)));
                     wedges[i](ie4,j) += (scale)*(vel1a*vel5b-vel1b*vel5a)*(glm::dot(glm::cross(f1.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
 
-                    wedges[i](ie5,j) += (scale)*(vel2a*vel4b-vel2b*vel4a)*(glm::dot(glm::cross(f2.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie6,j) += (scale)*(vel2a*vel5b-vel2b*vel5a)*(glm::dot(glm::cross(f2.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie5,j) += (scale)*(vel4a*vel2b-vel4b*vel2a)*(glm::dot(glm::cross(f4.normal,f2.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie6,j) += (scale)*(vel5a*vel2b-vel5b*vel2a)*(glm::dot(glm::cross(f5.normal,f2.normal),glm::dvec3(1.0,1.0,1.0)));
                     wedges[i](ie7,j) += (scale)*(vel2a*vel3b-vel2b*vel3a)*(glm::dot(glm::cross(f2.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
                     wedges[i](ie8,j) += (scale)*(vel2a*vel6b-vel2b*vel6a)*(glm::dot(glm::cross(f2.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
 
                     wedges[i](ie9,j) += (scale)*(vel5a*vel4b-vel5b*vel4a)*(glm::dot(glm::cross(f5.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie10,j) += (scale)*(vel5a*vel3b-vel5b*vel3a)*(glm::dot(glm::cross(f5.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
-                    wedges[i](ie11,j) += (scale)*(vel6a*vel4b-vel6b*vel4a)*(glm::dot(glm::cross(f6.normal,f4.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie10,j) += (scale)*(vel3a*vel5b-vel3b*vel5a)*(glm::dot(glm::cross(f3.normal,f5.normal),glm::dvec3(1.0,1.0,1.0)));
+                    wedges[i](ie11,j) += (scale)*(vel4a*vel6b-vel4b*vel6a)*(glm::dot(glm::cross(f4.normal,f6.normal),glm::dvec3(1.0,1.0,1.0)));
                     wedges[i](ie12,j) += (scale)*(vel6a*vel3b-vel6b*vel3a)*(glm::dot(glm::cross(f6.normal,f3.normal),glm::dvec3(1.0,1.0,1.0)));
                 }
             }
@@ -537,29 +541,40 @@ void PSFSolverGPU::buildAdvection()
 
 void PSFSolverGPU::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
 {
-    glEnableClientState(GL_VERTEX_ARRAY);
+    glm::vec3 extent = mesh->getAABB().getExtent();
     volumeTexture->clearImage();
-    volumeComputeShader->bind();
     volumeTexture->bindCompute(0);
     particles->bindCompute(1);
-    volumeComputeShader->uploadUnsignedInt("volumeTexture",0);
-    volumeComputeShader->dispatch(maxParticles,1,1,1024,1,1);
+    volumeComputeShader->bind();
+    volumeComputeShader->uploadVec3("aabb_min",mesh->getAABB().min);
+    volumeComputeShader->uploadVec3("aabb_extent",extent);
+    volumeComputeShader->uploadInt("volumeTexture",0);
+    volumeComputeShader->dispatch(maxParticles/1024,1,1,maxParticles,1,1);
+    int result;
+    if(result!=GL_NO_ERROR)
+    {
+        std::cout<<"Compute Error"<<result<<std::endl;
+    }
+    GLsync syncObj;
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+    glClientWaitSync(syncObj,0,1000*1000*1000*2);
+    glDeleteSync(syncObj);
 
-    Particle::setVertexAttribs();
-    Particle::enableVertexAttribs();
     glBindBuffer(GL_ARRAY_BUFFER,fullscreenVBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,fullscreenIBO);
+    glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,sizeof(glm::vec4),(void*)0);
     volumeTexture->bind(0);
     program->bind();
     program->uploadVec4("viewport_size",viewport_size);
     program->uploadVec3("camera_position",camera_position);
     program->uploadMat4("view_mat",view_mat);
-    program->uploadScalar("step_size",0.1);
+    program->uploadScalar("step_size",0.001);
     program->uploadVec3("aabb_min",mesh->getAABB().min);
     program->uploadVec3("aabb_max",mesh->getAABB().max);
-    program->uploadUnsignedInt("volumeTexture",0);
+    program->uploadInt("volumeTexture",0);
     program->uploadMat4("pvm",pvm);
+    program->uploadLight("light",light,view_mat);
     glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
 
     /*particles->bind();

@@ -1211,7 +1211,7 @@ int DECMesh3D::addFace(const Face3D& f,FaceDirection direction, unsigned x,unsig
         if(direction==FaceDirection::FRONT)
         {
             faces[fid].signum = -1;
-            faces[fid].normal = glm::dvec3(0.0,0.0,1.0);
+            faces[fid].normal = glm::dvec3(0.0,0.0,-1.0);
             faces[fid].center = glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(resolution,resolution,0.0);
             faces[fid].e1 = indexToSignedId(getXEdgeIndex(x,y+1,z),1);
             faces[fid].e2 = indexToSignedId(getYEdgeIndex(x+1,y,z),1);
@@ -1236,7 +1236,7 @@ int DECMesh3D::addFace(const Face3D& f,FaceDirection direction, unsigned x,unsig
         else if(direction==FaceDirection::BACK)
         {
             faces[fid].signum = 1;
-            faces[fid].normal = glm::dvec3(0.0,0.0,-1.0);
+            faces[fid].normal = glm::dvec3(0.0,0.0,1.0);
             faces[fid].center = glm::dvec3(this->min)+glm::dvec3(x*resolution,y*resolution,z*resolution)+0.5*glm::dvec3(resolution,resolution,0.0);
             faces[fid].e1 = indexToSignedId(getXEdgeIndex(x,y+1,z),1);
             faces[fid].e2 = indexToSignedId(getYEdgeIndex(x,y,z),1);
