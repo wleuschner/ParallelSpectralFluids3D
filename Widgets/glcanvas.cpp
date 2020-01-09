@@ -345,9 +345,9 @@ void GLCanvas::paintGL()
             //phongProgram->uploadVec3("cPos",camera.getPosition());
             phongProgram->uploadLight("light0",light,view);
             glDrawElements(GL_TRIANGLES,mesh->getIndices().size(),GL_UNSIGNED_INT,(void*)0);
-            Vertex::setVertexAttribs();
+            /*Vertex::setVertexAttribs();
             Vertex::enableVertexAttribs();
-            solver->drawParticles(lineProgram,pvm);
+            solver->drawParticles(lineProgram,pvm);*/
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);

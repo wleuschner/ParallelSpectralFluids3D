@@ -1,4 +1,7 @@
 #pragma extension cl_khr_gl_sharing : enable
+#define WARP_SHIFT 4
+#define GRP_SHIFT 4
+#define BANK_OFFSET(n)     (((n) >> WARP_SHIFT) + ((n) >> GRP_SHIFT))
 
 uint getVoxelIndex(uint x,uint y,uint z,uint4 dims)
 {
@@ -201,7 +204,7 @@ __kernel void advection(
     inParticles[idx].w -= 1.0;
 }
 
-__kernel void normalization_viscocity_gravity(__global double* e1,__global double* e2,__global double* basisCoeff,__global double* eigenValues,__global double* gravity,double visc,double timestep,double gravityOn)
+__kernel void normalization_viscocity_gravity(__global double* e1,__global double* e2,__global double4* basisCoeff,__global double4* eigenValues,__global double4* gravity,double visc,double timestep,double gravityOn)
 {
     uint idx = get_global_id(0);
     basisCoeff[idx] *= sqrt(e1[0]/e2[0]);
@@ -209,7 +212,145 @@ __kernel void normalization_viscocity_gravity(__global double* e1,__global doubl
     basisCoeff[idx] += timestep*gravity[idx]*gravityOn;
 }
 
-__kernel void update_vel(__global double* basisCoeff,__global double* vel,double timestep,uint index)
+__kernel void update_vel(__global double4* basisCoeff,__global double4* vel,double timestep)
 {
-    basisCoeff[index] += timestep*vel[0];
+    uint idx = get_global_id(0);
+    basisCoeff[idx] += timestep*vel[idx];
+}
+
+__kernel void advection_reduce_x(__global double4* advection_xyz,
+                                 __global double* advection_yz,
+                                 __global double4* baseCoeff,
+                                 uint3 dims,
+                                 __local double* temp)
+{
+    uint x_offset = get_global_id(0);
+    uint y_offset = get_global_id(1);
+    uint z_offset = get_global_id(2);
+
+    uint advection_offset = z_offset*(dims.y*dims.x) + y_offset*(dims.x);
+
+    uint lid = get_local_id(0);
+    uint n = get_local_size(0) * 2;
+
+    int ai = lid;
+    int bi = lid + n/2;
+    int bankOffsetA = BANK_OFFSET(ai);
+    int bankOffsetB = BANK_OFFSET(bi);
+
+    temp[ai + bankOffsetA] = dot(advection_xyz[advection_offset/4 + ai],baseCoeff[ai]);
+    temp[bi + bankOffsetB] = dot(advection_xyz[advection_offset/4 + bi],baseCoeff[bi]);
+
+
+    int offset = 1;
+    for(int d = n/2;d>0;d/=2)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+            temp[bi] += temp[ai];
+        }
+        offset*=2;
+    }
+
+    if(lid==0)
+    {
+        temp[n-1 + BANK_OFFSET(n-1)] = 0;
+    }
+
+    for(int d=1;d<n;d*=2)
+    {
+        offset /= 2;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+
+            double t = temp[ai];
+            temp[ai] = temp[bi];
+            temp[bi] += t;
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        advection_yz[z_offset*(dims.y)+y_offset] = temp[0 + BANK_OFFSET(0)];
+    }
+}
+
+__kernel void advection_reduce_y(__global double4* advection_yz,
+                                 __global double* advection_z,
+                                 __global double4* baseCoeff,
+                                 uint3 dims,
+                                 __local double* temp)
+{
+    uint x_offset = get_global_id(0);
+    uint y_offset = get_global_id(1);
+
+    uint advection_offset = y_offset*(dims.y);
+
+    uint lid = get_local_id(0);
+    uint n = get_local_size(0) * 2;
+
+    int ai = lid;
+    int bi = lid + n/2;
+    int bankOffsetA = BANK_OFFSET(ai);
+    int bankOffsetB = BANK_OFFSET(bi);
+
+
+    double4 a = advection_yz[advection_offset/4 + ai];
+    double4 b = baseCoeff[ai];
+
+    temp[ai + bankOffsetA] = dot(advection_yz[advection_offset/4 + ai],baseCoeff[ai]);
+    temp[bi + bankOffsetB] = dot(advection_yz[advection_offset/4 + bi],baseCoeff[bi]);
+
+    int offset = 1;
+    for(int d = n/2;d>0;d/=2)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+
+            temp[bi] += temp[ai];
+        }
+        offset*=2;
+    }
+
+    if(lid==0)
+    {
+        temp[n-1 + BANK_OFFSET(n-1)] = 0;
+    }
+
+    for(int d=1;d<n;d*=2)
+    {
+        offset /= 2;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+
+            double t = temp[ai];
+            temp[ai] = temp[bi];
+            temp[bi] += t;
+        }
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        advection_z[y_offset] = temp[0 + BANK_OFFSET(0)];
+    }
 }

@@ -17,7 +17,7 @@ void main()
     uvec3 dims = imageSize(volumeTexture);
     vec3 posNormalized = vec3(aabb_min+aabb_extent+pos[idx].xyz)/aabb_extent;
     //imageStore(volumeTexture,ivec3(idx%128),uvec4(600000));
-    imageAtomicAdd(volumeTexture,ivec3(posNormalized.x*dims.x,posNormalized.y*dims.y,posNormalized.z*dims.z),1);
+    imageAtomicAdd(volumeTexture,ivec3(posNormalized.x*dims.x,posNormalized.y*dims.y,posNormalized.z*dims.z),1000);
     //imageAtomicAdd(volumeTexture,ivec3(0,0,0),1);
 
 }

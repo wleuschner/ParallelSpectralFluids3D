@@ -56,7 +56,7 @@ void main()
     int maxSteps = 1024;
     vec3 light_energy = vec3(0.0);
     while (ray_length > 0 && maxSteps>0) {
-        float current_sample = texture(volumeTexture, position).r;
+        float current_sample = texture(volumeTexture, position).r/1000.0;
         if(current_sample>0.001)
         {
             vec3 lvec = step_size*(position-light.pos);
@@ -65,7 +65,7 @@ void main()
             for(int i=0;i<128;i++)
             {
                 lpos += lvec;
-                float light_sample = texture(volumeTexture, lpos).r;
+                float light_sample = texture(volumeTexture, lpos).r/1000.0;
                 shadow_dist+=light_sample;
             }
             float current_density = current_sample*step_size;
@@ -74,12 +74,6 @@ void main()
             light_energy+=absorbed_light*transmittance;
             transmittance *= 1.0-current_density;
         }
-
-        color = color+(1.0-transmittance)*(1-alpha)*0.1*vec3(1.0,0.0,0.0);
-        alpha = alpha+(1.0-transmittance)*(1.0-alpha)*0.1;
-
-        // Do something with the sample
-        // ...
 
         ray_length -= step_size;
         position += step_vector;

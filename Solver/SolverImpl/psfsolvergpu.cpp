@@ -67,6 +67,20 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         exit(-1);
     }
 
+    advection_reduce_x_kernel = clCreateKernel(program,"advection_reduce_x",&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build kernel"<<std::endl;
+        exit(-1);
+    }
+
+    advection_reduce_y_kernel = clCreateKernel(program,"advection_reduce_y",&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build kernel"<<std::endl;
+        exit(-1);
+    }
+
     //Load Volume Compute Shader
     Shader vol_compute(GL_COMPUTE_SHADER,"Res/Volume/volume.comp");
     if(!vol_compute.compile())
@@ -91,45 +105,85 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
 
 void PSFSolverGPU::integrate()
 {
+    glFinish();
     QElapsedTimer timer;
     timer.start();
 
     cl_int res;
-    size_t global_work_size = 1;
+    size_t global_work_size = nEigenFunctionsAligned/4;
     size_t local_work_size = 256;
     cl_mem basisCoeff_handle = vcl_basisCoeff.handle().opencl_handle();
     cl_mem eigenVals_handle = vcl_eigenValues.handle().opencl_handle();
     cl_mem gravity_handle = vcl_gravity.handle().opencl_handle();
     cl_mem vel_handle = vcl_velocityField.handle().opencl_handle();
+    cl_mem vel2_handle = vcl_velocity.handle().opencl_handle();
     cl_mem e1_handle = vcl_e1.handle().opencl_handle();
-    cl_mem e2_handle = vcl_e2.handle().opencl_handle();
+    cl_mem e2_handle = vcl_e1.handle().opencl_handle();
+
+
     double argGravity = gravityActive==true?1.0:0.0;
 
     vcl_e1 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
 
+    glm::uvec4 dims = glm::uvec4(nEigenFunctionsAligned,nEigenFunctionsAligned,nEigenFunctionsAligned,0);
+    size_t advection_reduce_work_size[] = {nEigenFunctionsAligned/4,nEigenFunctions,nEigenFunctions};
+    size_t advection_reduce_local_size[] = {nEigenFunctionsAligned/8,1,1};
+
+    clSetKernelArg(advection_reduce_x_kernel,0,sizeof(cl_mem),&advectionMatrices);
+    clSetKernelArg(advection_reduce_x_kernel,1,sizeof(cl_mem),&advectionScratchBuffer);
+    clSetKernelArg(advection_reduce_x_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
+    clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_uint3),&dims);
+    clSetKernelArg(advection_reduce_x_kernel,4,sizeof(cl_double)*nEigenFunctionsAligned*8,NULL);
+    res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_x_kernel,3,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel "<<res<<std::endl;
+    }
+    clSetKernelArg(advection_reduce_y_kernel,0,sizeof(cl_mem),&advectionScratchBuffer);
+    clSetKernelArg(advection_reduce_y_kernel,1,sizeof(cl_mem),&vel2_handle);
+    clSetKernelArg(advection_reduce_y_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
+    clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_uint3),&dims);
+    clSetKernelArg(advection_reduce_y_kernel,4,sizeof(cl_double)*nEigenFunctionsAligned*8,NULL);
+    res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_y_kernel,2,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel "<<res<<std::endl;
+    }
+
+    /*
     viennacl::scalar<double> val1 = 0.0;
     cl_mem val1_handle = val1.handle().opencl_handle();
     clSetKernelArg(vel_update_kernel,0,sizeof(cl_mem),&basisCoeff_handle);
     clSetKernelArg(vel_update_kernel,1,sizeof(cl_mem),&val1_handle);
-    clSetKernelArg(vel_update_kernel,2,sizeof(cl_double),&timeStep);
+    clSetKernelArg(vel_update_kernel,2,sizeof(cl_mem),&energy_handle);
+    clSetKernelArg(vel_update_kernel,3,sizeof(cl_double),&timeStep);
     for(unsigned int k=0;k<nEigenFunctions;k++)
     {
         val1 = viennacl::linalg::inner_prod(vcl_basisCoeff,viennacl::linalg::prod(vcl_advection[k],vcl_basisCoeff));
-        clSetKernelArg(vel_update_kernel,3,sizeof(cl_uint),&k);
+        clSetKernelArg(vel_update_kernel,4,sizeof(cl_uint),&k);
         res = clEnqueueNDRangeKernel(cl_queue,vel_update_kernel,1,0,&global_work_size,0,0,0,0);
         if(res!=CL_SUCCESS)
         {
             std::cout<<"Unable to execute Kernel "<<res<<std::endl;
         }
         //vcl_velocity(k) += viennacl::linalg::inner_prod(vcl_basisCoeff,viennacl::linalg::prod(vcl_advection[k],vcl_basisCoeff));
-    }
+    }*/
     //vcl_basisCoeff += vcl_timestep*vcl_velocity;
+
+    clSetKernelArg(vel_update_kernel,0,sizeof(cl_mem),&basisCoeff_handle);
+    clSetKernelArg(vel_update_kernel,1,sizeof(cl_mem),&vel2_handle);
+    clSetKernelArg(vel_update_kernel,2,sizeof(cl_double),&timeStep);
+    res = clEnqueueNDRangeKernel(cl_queue,vel_update_kernel,1,0,&global_work_size,0,0,0,0);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel "<<res<<std::endl;
+    }
 
     vcl_e2 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
 
     //basisCoeff *= vcl_e1/vcl_e2;
 
-    global_work_size = nEigenFunctions;
+    global_work_size = nEigenFunctions/4;
     clSetKernelArg(visc_kernel,0,sizeof(cl_mem),&e1_handle);
     clSetKernelArg(visc_kernel,1,sizeof(cl_mem),&e2_handle);
     clSetKernelArg(visc_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
@@ -148,7 +202,6 @@ void PSFSolverGPU::integrate()
     cl_int ret;
     unsigned int workGroupSize = 128;
     unsigned int workGroups = std::ceil(maxParticles/float(workGroupSize));
-    glFinish();
     cl_event event;
 
     particlesBuffer = clCreateFromGLBuffer(cl_context_id,CL_MEM_READ_WRITE,particles->id,&ret);
@@ -166,7 +219,7 @@ void PSFSolverGPU::integrate()
         exit(-1);
     }
     glm::uvec3 random = glm::uvec3(rand(),rand(),rand());
-    glm::uvec4 dims = glm::uvec4(decMesh.getDimensions(),0);
+    dims = glm::uvec4(decMesh.getDimensions(),0);
     glm::vec4 aabb_min = glm::vec4(mesh->getAABB().min,0.0);
     glm::vec4 aabb_max = glm::vec4(mesh->getAABB().max,0.0);
     glm::vec4 aabb_extent = glm::vec4(mesh->getAABB().getExtent(),0.0);
@@ -399,7 +452,6 @@ void PSFSolverGPU::buildLaplace()
     vcl_velocity = viennacl::zero_vector<double>(nEigenFunctions);
     vcl_e1 = 0.0;
     vcl_e2 = 0.0;
-    vcl_timestep = timeStep;
 
     for(unsigned int i=0;i<400000;i++)
     {
@@ -420,7 +472,6 @@ void PSFSolverGPU::buildAdvection()
     std::vector<Eigen::MatrixXd> wedges;
     wedges.resize(static_cast<unsigned int>(eigenValues.rows()));
     advection.resize(static_cast<unsigned int>(eigenValues.rows()));
-    vcl_advection.resize(static_cast<unsigned int>(eigenValues.rows()));
     for(unsigned int i=0;i<velBasisField.cols();i++)
     {
         wedges[i] = Eigen::MatrixXd(decMesh.getNumEdges(),eigenValues.rows());
@@ -531,11 +582,34 @@ void PSFSolverGPU::buildAdvection()
             advection[i].col(j) = eigenValues(i)*wedges[i].col(j);
         }
     }
+
+    nEigenFunctionsAligned = nEigenFunctions + (4-nEigenFunctions%4)*(nEigenFunctions%4==0?0:1);
+    unsigned int gpuUploadSize = nEigenFunctionsAligned*nEigenFunctionsAligned*nEigenFunctionsAligned;
+    std::vector<double> gpuUpload;
+    gpuUpload.resize(gpuUploadSize);
+    memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
+    cl_int ret;
+    advectionScratchBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,(nEigenFunctionsAligned*nEigenFunctionsAligned)*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+
     for(unsigned int i=0;i<eigenValues.rows();i++)
     {
         advection[i] = vortBasisField.transpose()*advection[i];
-        vcl_advection[i].resize(advection[i].rows(),advection[i].cols());
-        viennacl::copy(advection[i],vcl_advection[i]);
+        #pragma omp parallel for
+        for(unsigned int j=0;j<nEigenFunctions;j++)
+        {
+            memcpy(gpuUpload.data() + i*(nEigenFunctionsAligned*nEigenFunctionsAligned)+j*(nEigenFunctionsAligned),advection[i].col(j).data(),sizeof(double)*nEigenFunctions);
+        }
+    }
+    advectionMatrices = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
     }
 }
 
