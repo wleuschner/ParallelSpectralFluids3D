@@ -1035,7 +1035,6 @@ int DECMesh3D::addPoint(const Vertex3D& v, unsigned x,unsigned y,unsigned z)
     }
     else
     {
-        std::cout<<"Point conflict: "<<vid<<" "<<x<<" "<<y<<" "<<z<<" "<<points[vid].center.x<<" "<<points[vid].center.y<<" "<<points[vid].center.z<<std::endl;
         return -1;
     }
 }
@@ -1153,7 +1152,6 @@ int DECMesh3D::addEdge(const Edge3D& e, EdgeDirection direction, unsigned x,unsi
     }
     else
     {
-        std::cout<<"EDGE CONFLICT:"<<eid<<" "<<edges[eid].inside<<std::endl;
         if(direction==EdgeDirection::NEGZ)
         {
             assert(eid<numZEdges);
@@ -1363,7 +1361,6 @@ int DECMesh3D::addFace(const Face3D& f,FaceDirection direction, unsigned x,unsig
     }
 
     else {
-        std::cout<<"FACE CONFLICT"<<std::endl;
         return -1;
     }
 }
@@ -1383,7 +1380,6 @@ void DECMesh3D::addVoxel(const Voxel3D& v, unsigned x,unsigned y,unsigned z)
         voxels[vid].f4 = indexToSignedId(getYFaceIndex(x,y+1,z),1); //Top Face
         voxels[vid].f5 = indexToSignedId(getXFaceIndex(x,y,z),1); //Left Face
         voxels[vid].f6 = indexToSignedId(getXFaceIndex(x+1,y,z),1);
-        std::cout<<voxels[vid].f1<<" "<<voxels[vid].f2<<" "<<voxels[vid].f3<<" "<<voxels[vid].f4<<" "<<voxels[vid].f5<<" "<<voxels[vid].f6<<std::endl;
         voxels[vid].f1 *= addFace(Face3D(voxels[vid].f1,v.inside),FaceDirection::FRONT,x,y,z);
         voxels[vid].f2 *= addFace(Face3D(voxels[vid].f2,v.inside),FaceDirection::BACK,x,y,z+1);
         voxels[vid].f3 *= addFace(Face3D(voxels[vid].f3,v.inside),FaceDirection::BOTTOM,x,y,z);
@@ -1403,7 +1399,6 @@ void DECMesh3D::addVoxel(const Voxel3D& v, unsigned x,unsigned y,unsigned z)
         signBitString[idx] |= orField;
     }
     else {
-        std::cout<<"CONFLICT"<<std::endl;
     }
 }
 

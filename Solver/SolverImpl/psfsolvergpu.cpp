@@ -13,6 +13,9 @@
 #include "../../Spectra/MatOp/SparseSymShiftSolve.h"
 #include "../../Spectra/SymEigsShiftSolver.h"
 #include "../../DEC/dec.h"
+#define WARP_SHIFT 4
+#define GRP_SHIFT 4
+#define BANK_OFFSET(n)     (((n) >> WARP_SHIFT) + ((n) >> GRP_SHIFT))
 
 PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_queue queue) : AbstractSolver()
 {
@@ -133,7 +136,7 @@ void PSFSolverGPU::integrate()
     clSetKernelArg(advection_reduce_x_kernel,1,sizeof(cl_mem),&advectionScratchBuffer);
     clSetKernelArg(advection_reduce_x_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
     clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_uint3),&dims);
-    clSetKernelArg(advection_reduce_x_kernel,4,sizeof(cl_double)*nEigenFunctionsAligned*8,NULL);
+    clSetKernelArg(advection_reduce_x_kernel,4,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
     res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_x_kernel,3,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
@@ -143,7 +146,7 @@ void PSFSolverGPU::integrate()
     clSetKernelArg(advection_reduce_y_kernel,1,sizeof(cl_mem),&vel2_handle);
     clSetKernelArg(advection_reduce_y_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
     clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_uint3),&dims);
-    clSetKernelArg(advection_reduce_y_kernel,4,sizeof(cl_double)*nEigenFunctionsAligned*8,NULL);
+    clSetKernelArg(advection_reduce_y_kernel,4,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
     res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_y_kernel,2,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
@@ -428,7 +431,7 @@ void PSFSolverGPU::buildLaplace()
                 AABB aabb = mesh->getAABB();
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
                    it->center.y<aabb.min.y+0.8/* && abs(it->center.x)<0.4 && abs(it->center.z)<0.4*/)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.10;
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*10.00;
 
             }
         }
@@ -480,7 +483,7 @@ void PSFSolverGPU::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
-    double scale = 0.5*0.5;//((decMesh.resolution/2)*(decMesh.resolution/2));
+    double scale = ((decMesh.resolution/2)*(decMesh.resolution/2));
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)
@@ -579,7 +582,7 @@ void PSFSolverGPU::buildAdvection()
     {
         for(unsigned int j=0;j<nEigenFunctions;j++)
         {
-            advection[i].col(j) = eigenValues(i)*wedges[i].col(j);
+            advection[i].col(j) = 1.0/eigenValues(i)*wedges[i].col(j);
         }
     }
 

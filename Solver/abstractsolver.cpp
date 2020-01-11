@@ -12,8 +12,8 @@ AbstractSolver::AbstractSolver()
     volumeTexture = NULL;
     mesh = NULL;
     gravityActive = false;
-    resolution = 0.05;
-    nEigenFunctions = 96;
+    resolution = 0.1;
+    nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
     lifeTime = 10.0*60.0;

@@ -257,31 +257,10 @@ __kernel void advection_reduce_x(__global double4* advection_xyz,
         offset*=2;
     }
 
-    if(lid==0)
-    {
-        temp[n-1 + BANK_OFFSET(n-1)] = 0;
-    }
-
-    for(int d=1;d<n;d*=2)
-    {
-        offset /= 2;
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid<d)
-        {
-            int ai = offset * (2*lid+1)-1;
-            int bi = offset * (2*lid+2)-1;
-            ai += BANK_OFFSET(ai);
-            bi += BANK_OFFSET(bi);
-
-            double t = temp[ai];
-            temp[ai] = temp[bi];
-            temp[bi] += t;
-        }
-    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if(lid==0)
     {
-        advection_yz[z_offset*(dims.y)+y_offset] = temp[0 + BANK_OFFSET(0)];
+        advection_yz[z_offset*(dims.y)+y_offset] = temp[n-1 + BANK_OFFSET(n-1)];
     }
 }
 
@@ -327,30 +306,9 @@ __kernel void advection_reduce_y(__global double4* advection_yz,
         offset*=2;
     }
 
-    if(lid==0)
-    {
-        temp[n-1 + BANK_OFFSET(n-1)] = 0;
-    }
-
-    for(int d=1;d<n;d*=2)
-    {
-        offset /= 2;
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if(lid<d)
-        {
-            int ai = offset * (2*lid+1)-1;
-            int bi = offset * (2*lid+2)-1;
-            ai += BANK_OFFSET(ai);
-            bi += BANK_OFFSET(bi);
-
-            double t = temp[ai];
-            temp[ai] = temp[bi];
-            temp[bi] += t;
-        }
-    }
     barrier(CLK_LOCAL_MEM_FENCE);
     if(lid==0)
     {
-        advection_z[y_offset] = temp[0 + BANK_OFFSET(0)];
+        advection_z[y_offset] = temp[n-1 + BANK_OFFSET(n-1)];
     }
 }
