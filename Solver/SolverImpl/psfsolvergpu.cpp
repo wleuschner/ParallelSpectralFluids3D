@@ -129,14 +129,13 @@ void PSFSolverGPU::integrate()
     vcl_e1 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
 
     glm::uvec4 dims = glm::uvec4(nEigenFunctionsAligned,nEigenFunctionsAligned,nEigenFunctionsAligned,0);
-    size_t advection_reduce_work_size[] = {nEigenFunctionsAligned/4,nEigenFunctions,nEigenFunctions};
-    size_t advection_reduce_local_size[] = {nEigenFunctionsAligned/8,1,1};
+    size_t advection_reduce_work_size[] = {ceil(nEigenFunctionsAligned/4.0),nEigenFunctions,nEigenFunctions};
+    size_t advection_reduce_local_size[] = {ceil(nEigenFunctionsAligned/8.0),1,1};
 
     clSetKernelArg(advection_reduce_x_kernel,0,sizeof(cl_mem),&advectionMatrices);
     clSetKernelArg(advection_reduce_x_kernel,1,sizeof(cl_mem),&advectionScratchBuffer);
     clSetKernelArg(advection_reduce_x_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_uint3),&dims);
-    clSetKernelArg(advection_reduce_x_kernel,4,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
+    clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
     res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_x_kernel,3,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
@@ -145,8 +144,7 @@ void PSFSolverGPU::integrate()
     clSetKernelArg(advection_reduce_y_kernel,0,sizeof(cl_mem),&advectionScratchBuffer);
     clSetKernelArg(advection_reduce_y_kernel,1,sizeof(cl_mem),&vel2_handle);
     clSetKernelArg(advection_reduce_y_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_uint3),&dims);
-    clSetKernelArg(advection_reduce_y_kernel,4,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
+    clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
     res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_y_kernel,2,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
@@ -312,18 +310,18 @@ void PSFSolverGPU::buildLaplace()
                     //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
                         bool doubleEv = false;
-                        /*
-                        for(unsigned int j=0;j<foundEigenValues;j++)
+
+                        /*for(unsigned int j=0;j<foundEigenValues;j++)
                         {
-                            //if(fabs(eigenValues(j)-tempEigenValues(i))<=std::numeric_limits<float>::epsilon())
-                            if(velBasisField.col(j).isApprox(tempEigenVectors.col(i)))
+                            if(fabs(eigenValues(j)-tempEigenValues(i))<=0.1)
+                            //if(velBasisField.col(j).isApprox(tempEigenVectors.col(i)))
                             {
                                 std::cout<<"Already Inside "<<tempEigenValues(i)<<std::endl;
                                 doubleEv = true;
                                 break;
                             }
                         }*/
-                        //if(!doubleEv)
+                        if(!doubleEv)
                         {
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
                         //if(tempEigenValues(i)!=0.0)
@@ -434,7 +432,7 @@ void PSFSolverGPU::buildLaplace()
                 AABB aabb = mesh->getAABB();
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
                    it->center.y<aabb.min.y+0.8 && abs(it->center.x)<0.4 && abs(it->center.z)<0.4)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.10;
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.1;
 
             }
         }
@@ -590,12 +588,12 @@ void PSFSolverGPU::buildAdvection()
     }
 
     nEigenFunctionsAligned = nEigenFunctions + (4-nEigenFunctions%4)*(nEigenFunctions%4==0?0:1);
-    unsigned int gpuUploadSize = nEigenFunctionsAligned*nEigenFunctionsAligned*nEigenFunctionsAligned;
+    unsigned int gpuUploadSize = nEigenFunctions*nEigenFunctions*nEigenFunctionsAligned;
     std::vector<double> gpuUpload;
     gpuUpload.resize(gpuUploadSize);
     memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
     cl_int ret;
-    advectionScratchBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,(nEigenFunctionsAligned*nEigenFunctionsAligned)*sizeof(double),gpuUpload.data(),&ret);
+    advectionScratchBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,(nEigenFunctions*nEigenFunctionsAligned)*sizeof(double),gpuUpload.data(),&ret);
     if(ret!=CL_SUCCESS)
     {
         printf("Could not allocate Buffer");
@@ -608,7 +606,7 @@ void PSFSolverGPU::buildAdvection()
         #pragma omp parallel for
         for(unsigned int j=0;j<nEigenFunctions;j++)
         {
-            memcpy(gpuUpload.data() + i*(nEigenFunctionsAligned*nEigenFunctionsAligned)+j*(nEigenFunctionsAligned),advection[i].col(j).data(),sizeof(double)*nEigenFunctions);
+            memcpy(gpuUpload.data() + i*(nEigenFunctions*nEigenFunctionsAligned)+j*(nEigenFunctionsAligned),advection[i].col(j).data(),sizeof(double)*nEigenFunctions);
         }
     }
     advectionMatrices = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);

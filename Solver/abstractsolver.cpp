@@ -13,7 +13,7 @@ AbstractSolver::AbstractSolver()
     mesh = NULL;
     gravityActive = false;
     resolution = 0.1;
-    nEigenFunctions = 16;
+    nEigenFunctions = 96;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
     lifeTime = 10.0*60.0;

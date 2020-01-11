@@ -221,13 +221,13 @@ __kernel void update_vel(__global double4* basisCoeff,__global double4* vel,doub
 __kernel void advection_reduce_x(__global double4* advection_xyz,
                                  __global double* advection_yz,
                                  __global double4* baseCoeff,
-                                 uint3 dims,
                                  __local double* temp)
 {
     uint x_offset = get_global_id(0);
     uint y_offset = get_global_id(1);
     uint z_offset = get_global_id(2);
 
+    uint3 dims = (uint3)(get_global_size(0),get_global_size(1),get_global_size(2));
     uint advection_offset = z_offset*(dims.y*dims.x) + y_offset*(dims.x);
 
     uint lid = get_local_id(0);
@@ -238,8 +238,8 @@ __kernel void advection_reduce_x(__global double4* advection_xyz,
     int bankOffsetA = BANK_OFFSET(ai);
     int bankOffsetB = BANK_OFFSET(bi);
 
-    temp[ai + bankOffsetA] = dot(advection_xyz[advection_offset/4 + ai],baseCoeff[ai]);
-    temp[bi + bankOffsetB] = dot(advection_xyz[advection_offset/4 + bi],baseCoeff[bi]);
+    temp[ai + bankOffsetA] = dot(advection_xyz[advection_offset + ai],baseCoeff[ai]);
+    temp[bi + bankOffsetB] = dot(advection_xyz[advection_offset + bi],baseCoeff[bi]);
 
 
     int offset = 1;
@@ -267,13 +267,13 @@ __kernel void advection_reduce_x(__global double4* advection_xyz,
 __kernel void advection_reduce_y(__global double4* advection_yz,
                                  __global double* advection_z,
                                  __global double4* baseCoeff,
-                                 uint3 dims,
                                  __local double* temp)
 {
     uint x_offset = get_global_id(0);
     uint y_offset = get_global_id(1);
 
-    uint advection_offset = y_offset*(dims.y);
+    uint2 dims = (uint2)(get_global_size(0),get_global_size(1));
+    uint advection_offset = y_offset*(dims.x);
 
     uint lid = get_local_id(0);
     uint n = get_local_size(0) * 2;
@@ -283,12 +283,8 @@ __kernel void advection_reduce_y(__global double4* advection_yz,
     int bankOffsetA = BANK_OFFSET(ai);
     int bankOffsetB = BANK_OFFSET(bi);
 
-
-    double4 a = advection_yz[advection_offset/4 + ai];
-    double4 b = baseCoeff[ai];
-
-    temp[ai + bankOffsetA] = dot(advection_yz[advection_offset/4 + ai],baseCoeff[ai]);
-    temp[bi + bankOffsetB] = dot(advection_yz[advection_offset/4 + bi],baseCoeff[bi]);
+    temp[ai + bankOffsetA] = dot(advection_yz[advection_offset + ai],baseCoeff[ai]);
+    temp[bi + bankOffsetB] = dot(advection_yz[advection_offset + bi],baseCoeff[bi]);
 
     int offset = 1;
     for(int d = n/2;d>0;d/=2)
