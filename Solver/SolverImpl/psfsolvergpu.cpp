@@ -304,6 +304,9 @@ void PSFSolverGPU::buildLaplace()
                 bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
+                    if(tempEigenValues(i)<0.0) continue;
+                    if(std::abs(tempEigenValues(i))<1e-10 || std::abs(tempEigenValues(i))>1e+10) continue;
+
                     Eigen::VectorXd backProjection = mat*tempEigenVectors.col(i);
                     if(backProjection.isApprox(tempEigenValues(i)*tempEigenVectors.col(i),1))
                     //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
@@ -320,7 +323,7 @@ void PSFSolverGPU::buildLaplace()
                                 break;
                             }
                         }*/
-                        if(!doubleEv)
+                        //if(!doubleEv)
                         {
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
                         //if(tempEigenValues(i)!=0.0)
@@ -430,8 +433,8 @@ void PSFSolverGPU::buildLaplace()
             {
                 AABB aabb = mesh->getAABB();
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
-                   it->center.y<aabb.min.y+0.8/* && abs(it->center.x)<0.4 && abs(it->center.z)<0.4*/)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*10.00;
+                   it->center.y<aabb.min.y+0.8 && abs(it->center.x)<0.4 && abs(it->center.z)<0.4)
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.10;
 
             }
         }
@@ -483,7 +486,7 @@ void PSFSolverGPU::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
-    double scale = ((decMesh.resolution/2)*(decMesh.resolution/2));
+    double scale = 0.5*0.5;//((decMesh.resolution/2)*(decMesh.resolution/2));
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)

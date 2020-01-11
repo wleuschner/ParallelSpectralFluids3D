@@ -186,7 +186,7 @@ __kernel void advection(
 
     float4 zVelXInterp = mix((float4)(vel1z,vel3z,vel5z,vel7z),(float4)(vel2z,vel4z,vel6z,vel8z),clamp(particleNormalizedZ.y,0.0f,1.0f));
     float2 zVelYInterp = mix((float2)(zVelXInterp.x,zVelXInterp.z),(float2)(zVelXInterp.y,zVelXInterp.w),clamp(particleNormalizedZ.x,0.0f,1.0f));
-    vel.z = -mix(zVelYInterp.x,zVelYInterp.y,clamp(particleNormalizedZ.z,0.0f,1.0f));
+    vel.z = mix(zVelYInterp.x,zVelYInterp.y,clamp(particleNormalizedZ.z,0.0f,1.0f));
 
     float4 newPart;
     float4 aabb_center = aabb_min+0.5*(aabb_max-aabb_min);
