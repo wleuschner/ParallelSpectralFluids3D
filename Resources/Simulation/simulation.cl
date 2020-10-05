@@ -1,7 +1,7 @@
 #pragma extension cl_khr_gl_sharing : enable
-#define WARP_SHIFT 4
-#define GRP_SHIFT 4
-#define BANK_OFFSET(n)     (((n) >> WARP_SHIFT) + ((n) >> GRP_SHIFT))
+#define NUM_BANKS 4
+#define LOG_NUM_BANKS 8
+#define BANK_OFFSET(n)     (((n) >> NUM_BANKS) + ((n) >> (LOG_NUM_BANKS)))
 
 uint getVoxelIndex(uint x,uint y,uint z,uint4 dims)
 {
@@ -33,7 +33,7 @@ int getFaceSignum(uint vid,uint fidx,__global const uint* signBitString)
 __attribute__((reqd_work_group_size(1024, 1, 1)))
 __kernel void advection(
                         __global float4* inParticles,
-                        __global const double* velField,
+                        __global const float* velField,
                         __global const uint* signBitString,
                         const uint4 dims,
                         const float4 aabb_min,
@@ -127,34 +127,34 @@ __kernel void advection(
 
 
     float vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
-    vel1x = -getFaceSignum(v1xIdx,4,signBitString)*convert_float(velField[v1xf5]);
-    vel3x = getFaceSignum(v1xIdx,5,signBitString)*convert_float(velField[v1xf6]);
-    vel2x = -getFaceSignum(v2xIdx,4,signBitString)*convert_float(velField[v2xf5]);
-    vel4x = getFaceSignum(v2xIdx,5,signBitString)*convert_float(velField[v2xf6]);
-    vel5x = -getFaceSignum(v3xIdx,4,signBitString)*convert_float(velField[v3xf5]);
-    vel7x = getFaceSignum(v3xIdx,5,signBitString)*convert_float(velField[v3xf6]);
-    vel6x = -getFaceSignum(v4xIdx,4,signBitString)*convert_float(velField[v4xf5]);
-    vel8x = getFaceSignum(v4xIdx,5,signBitString)*convert_float(velField[v4xf6]);
+    vel1x = -getFaceSignum(v1xIdx,4,signBitString)*(velField[v1xf5]);
+    vel3x = getFaceSignum(v1xIdx,5,signBitString)*(velField[v1xf6]);
+    vel2x = -getFaceSignum(v2xIdx,4,signBitString)*(velField[v2xf5]);
+    vel4x = getFaceSignum(v2xIdx,5,signBitString)*(velField[v2xf6]);
+    vel5x = -getFaceSignum(v3xIdx,4,signBitString)*(velField[v3xf5]);
+    vel7x = getFaceSignum(v3xIdx,5,signBitString)*(velField[v3xf6]);
+    vel6x = -getFaceSignum(v4xIdx,4,signBitString)*(velField[v4xf5]);
+    vel8x = getFaceSignum(v4xIdx,5,signBitString)*(velField[v4xf6]);
 
     float vel1y,vel2y,vel3y,vel4y,vel5y,vel6y,vel7y,vel8y;
-    vel1y = -getFaceSignum(v1yIdx,2,signBitString)*convert_float(velField[v1yf3]);
-    vel2y = getFaceSignum(v1yIdx,3,signBitString)*convert_float(velField[v1yf4]);
-    vel3y = -getFaceSignum(v2yIdx,2,signBitString)*convert_float(velField[v2yf3]);
-    vel4y = getFaceSignum(v2yIdx,3,signBitString)*convert_float(velField[v2yf4]);
-    vel5y = -getFaceSignum(v3yIdx,2,signBitString)*convert_float(velField[v3yf3]);
-    vel6y = getFaceSignum(v3yIdx,3,signBitString)*convert_float(velField[v3yf4]);
-    vel7y = -getFaceSignum(v4yIdx,2,signBitString)*convert_float(velField[v4yf3]);
-    vel8y = getFaceSignum(v4yIdx,3,signBitString)*convert_float(velField[v4yf4]);
+    vel1y = -getFaceSignum(v1yIdx,2,signBitString)*(velField[v1yf3]);
+    vel2y = getFaceSignum(v1yIdx,3,signBitString)*(velField[v1yf4]);
+    vel3y = -getFaceSignum(v2yIdx,2,signBitString)*(velField[v2yf3]);
+    vel4y = getFaceSignum(v2yIdx,3,signBitString)*(velField[v2yf4]);
+    vel5y = -getFaceSignum(v3yIdx,2,signBitString)*(velField[v3yf3]);
+    vel6y = getFaceSignum(v3yIdx,3,signBitString)*(velField[v3yf4]);
+    vel7y = -getFaceSignum(v4yIdx,2,signBitString)*(velField[v4yf3]);
+    vel8y = getFaceSignum(v4yIdx,3,signBitString)*(velField[v4yf4]);
 
     float vel1z,vel2z,vel3z,vel4z,vel5z,vel6z,vel7z,vel8z;
-    vel1z = getFaceSignum(v1zIdx,0,signBitString)*convert_float(velField[v1zf1]);
-    vel2z = getFaceSignum(v3zIdx,0,signBitString)*convert_float(velField[v3zf1]);
-    vel3z = getFaceSignum(v2zIdx,0,signBitString)*convert_float(velField[v2zf1]);
-    vel4z = getFaceSignum(v4zIdx,0,signBitString)*convert_float(velField[v4zf1]);
-    vel5z = -getFaceSignum(v1zIdx,1,signBitString)*convert_float(velField[v1zf2]);
-    vel6z = -getFaceSignum(v3zIdx,1,signBitString)*convert_float(velField[v3zf2]);
-    vel7z = -getFaceSignum(v2zIdx,1,signBitString)*convert_float(velField[v2zf2]);
-    vel8z = -getFaceSignum(v4zIdx,1,signBitString)*convert_float(velField[v4zf2]);
+    vel1z = getFaceSignum(v1zIdx,0,signBitString)*(velField[v1zf1]);
+    vel2z = getFaceSignum(v3zIdx,0,signBitString)*(velField[v3zf1]);
+    vel3z = getFaceSignum(v2zIdx,0,signBitString)*(velField[v2zf1]);
+    vel4z = getFaceSignum(v4zIdx,0,signBitString)*(velField[v4zf1]);
+    vel5z = -getFaceSignum(v1zIdx,1,signBitString)*(velField[v1zf2]);
+    vel6z = -getFaceSignum(v3zIdx,1,signBitString)*(velField[v3zf2]);
+    vel7z = -getFaceSignum(v2zIdx,1,signBitString)*(velField[v2zf2]);
+    vel8z = -getFaceSignum(v4zIdx,1,signBitString)*(velField[v4zf2]);
 
     float3 vel=(float3)(0.0,0.0,0.0);
 
@@ -198,16 +198,16 @@ __kernel void advection(
     newPart.w = lifeTime*((rand2%1024)/1024.0);
     float4 oldPart = inParticles[idx];
 
-    inParticles[idx] = mix(oldPart,newPart,convert_float(inParticles[idx].w<0.0));
+    inParticles[idx] = mix(oldPart,newPart,(inParticles[idx].w<0.0));
 
     inParticles[idx].xyz = (clamp(inParticles[idx].xyz+timestep*vel,aabb_min.xyz,aabb_max.xyz));
     inParticles[idx].w -= 1.0;
 }
 
-__kernel void normalization_viscocity_gravity(__global double* e1,__global double* e2,__global double4* basisCoeff,__global double4* eigenValues,__global double4* gravity,double visc,double timestep,double gravityOn)
+__kernel void normalization_viscocity_gravity(__global double* energy,__global double4* basisCoeff,__global double4* eigenValues,__global double4* gravity,double visc,double timestep,double gravityOn)
 {
     uint idx = get_global_id(0);
-    basisCoeff[idx] *= sqrt(e1[0]/e2[0]);
+    basisCoeff[idx] *= sqrt(energy[0]/energy[1]);
     basisCoeff[idx] *= exp(-visc*eigenValues[idx]*timestep);
     basisCoeff[idx] += timestep*gravity[idx]*gravityOn;
 }
@@ -227,20 +227,18 @@ __kernel void advection_reduce_x(__global double4* advection_xyz,
     uint y_offset = get_global_id(1);
     uint z_offset = get_global_id(2);
 
-    uint3 dims = (uint3)(get_global_size(0),get_global_size(1),get_global_size(2));
-    uint advection_offset = z_offset*(dims.y*dims.x) + y_offset*(dims.x);
+    uint3 dims = (uint3)(get_global_size(0)*2,get_global_size(1),get_global_size(2));
+
+    uint advection_offset = (z_offset)*(dims.y*dims.x) + (y_offset)*(dims.x);
 
     uint lid = get_local_id(0);
     uint n = get_local_size(0) * 2;
 
     int ai = lid;
     int bi = lid + n/2;
-    int bankOffsetA = BANK_OFFSET(ai);
-    int bankOffsetB = BANK_OFFSET(bi);
 
-    temp[ai + bankOffsetA] = dot(advection_xyz[advection_offset + ai],baseCoeff[ai]);
-    temp[bi + bankOffsetB] = dot(advection_xyz[advection_offset + bi],baseCoeff[bi]);
-
+    temp[ai + BANK_OFFSET(ai)] = dot(advection_xyz[advection_offset + ai],baseCoeff[ai]);
+    temp[bi + BANK_OFFSET(bi)] = dot(advection_xyz[advection_offset + bi],baseCoeff[bi]);
 
     int offset = 1;
     for(int d = n/2;d>0;d/=2)
@@ -260,7 +258,8 @@ __kernel void advection_reduce_x(__global double4* advection_xyz,
     barrier(CLK_LOCAL_MEM_FENCE);
     if(lid==0)
     {
-        advection_yz[z_offset*(dims.y)+y_offset] = temp[n-1 + BANK_OFFSET(n-1)];
+        advection_yz[z_offset*(dims.x*4)+y_offset] = temp[n-1 + BANK_OFFSET(n-1)];
+        //printf("%d,%d,%d",x_offset,y_offset,z_offset);
     }
 }
 
@@ -272,7 +271,8 @@ __kernel void advection_reduce_y(__global double4* advection_yz,
     uint x_offset = get_global_id(0);
     uint y_offset = get_global_id(1);
 
-    uint2 dims = (uint2)(get_global_size(0),get_global_size(1));
+    uint2 dims = (uint2)(get_global_size(0)*2,get_global_size(1));
+
     uint advection_offset = y_offset*(dims.x);
 
     uint lid = get_local_id(0);
@@ -280,11 +280,11 @@ __kernel void advection_reduce_y(__global double4* advection_yz,
 
     int ai = lid;
     int bi = lid + n/2;
-    int bankOffsetA = BANK_OFFSET(ai);
-    int bankOffsetB = BANK_OFFSET(bi);
 
-    temp[ai + bankOffsetA] = dot(advection_yz[advection_offset + ai],baseCoeff[ai]);
-    temp[bi + bankOffsetB] = dot(advection_yz[advection_offset + bi],baseCoeff[bi]);
+    temp[ai + BANK_OFFSET(ai)] = dot(advection_yz[advection_offset + ai],baseCoeff[ai]);
+    temp[bi + BANK_OFFSET(bi)] = dot(advection_yz[advection_offset + bi],baseCoeff[bi]);
+
+    //printf("%f %f %f %f",advection_yz[advection_offset + ai].x,advection_yz[advection_offset + ai].y,advection_yz[advection_offset + ai].z,advection_yz[advection_offset + ai].w);
 
     int offset = 1;
     for(int d = n/2;d>0;d/=2)
@@ -306,5 +306,89 @@ __kernel void advection_reduce_y(__global double4* advection_yz,
     if(lid==0)
     {
         advection_z[y_offset] = temp[n-1 + BANK_OFFSET(n-1)];
+        //printf("%d:",y_offset);
+    }
+}
+
+__kernel void reconstruct_velocity_field(__global double4* velBasisField,
+                                         __global float* velocity,
+                                         __global double4* baseCoeff,
+                                         __local double* temp)
+{
+    uint x_offset = get_global_id(0);
+    uint y_offset = get_global_id(1);
+
+    uint2 dims = (uint2)(get_global_size(0)*2,get_global_size(1));
+    uint advection_offset = y_offset*(dims.x);
+
+    uint lid = get_local_id(0);
+    uint n = get_local_size(0) * 2;
+
+    int ai = lid;
+    int bi = lid + n/2;
+
+    temp[ai + BANK_OFFSET(ai)] = dot(velBasisField[advection_offset + ai],baseCoeff[ai]);
+    temp[bi + BANK_OFFSET(bi)] = dot(velBasisField[advection_offset + bi],baseCoeff[bi]);
+
+    int offset = 1;
+    for(int d = n/2;d>0;d/=2)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+
+            temp[bi] += temp[ai];
+        }
+        offset*=2;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        velocity[y_offset] = convert_float(temp[n-1 + BANK_OFFSET(n-1)]);
+    }
+}
+
+__kernel void energy(__global double4* baseCoeff,
+                     __global double* energyBuffer,
+                     uint index,
+                     __local double* temp)
+{
+    uint x_offset = get_global_id(0);
+    uint y_offset = get_global_id(1);
+
+    uint lid = get_local_id(0);
+    uint n = get_local_size(0) * 2;
+
+    int ai = lid;
+    int bi = lid + n/2;
+
+    temp[ai + BANK_OFFSET(ai)] = dot(baseCoeff[ai],baseCoeff[ai]);
+    temp[bi + BANK_OFFSET(bi)] = dot(baseCoeff[bi],baseCoeff[bi]);
+
+    int offset = 1;
+    for(int d = n/2;d>0;d/=2)
+    {
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if(lid<d)
+        {
+            int ai = offset * (2*lid+1)-1;
+            int bi = offset * (2*lid+2)-1;
+            ai += BANK_OFFSET(ai);
+            bi += BANK_OFFSET(bi);
+
+            temp[bi] += temp[ai];
+        }
+        offset*=2;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(lid==0)
+    {
+        energyBuffer[index] = temp[n-1 + BANK_OFFSET(n-1)];
     }
 }

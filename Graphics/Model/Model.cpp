@@ -322,121 +322,122 @@ DECMesh3D Model::voxelize(float resolution)
                 //Green Channel
                 for(unsigned int d=0;d<32;d++)
                 {
-
-                    if(buffer[1+(x*4)+width*4*y+(width*4*height)*l]&1)
+                    if(buffer[(x*4)+width*4*y+(width*4*height)*l+1]&1)
                     {
-                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1+1))+(x+1);
-                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1+1))+(x+1);
+                        unsigned int z = (32*4*l+d+32);
+                        v1 = decMesh.getPointIndex(x,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = decMesh.getPointIndex(x+1,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = decMesh.getPointIndex(x+1,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = decMesh.getPointIndex(x,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
 
-                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1))+(x+1);
-                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+32))+((width+1+2)*(y+1))+(x+1+1);
-                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1+1);
-                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+32)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+32)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
+                        v5 = decMesh.getPointIndex(x,y,z);//((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
+                        v6 = decMesh.getPointIndex(x+1,y,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = decMesh.getPointIndex(x+1,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = decMesh.getPointIndex(x,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.setVoxelInside(Voxel3D(decMesh.getVoxelIndex(x,y,z),GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
-                        float zp = getAABB().min.z+l*32*4*resolution+(d+32)*resolution;
-                        glm::vec3 p1(xp-resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p2(xp+resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p3(xp+resolution/2,yp-resolution/2,zp-resolution/2);
-                        glm::vec3 p4(xp-resolution/2,yp-resolution/2,zp-resolution/2);
+                        float zp = getAABB().min.z+z*resolution;
+                        glm::vec3 p1(xp,yp+resolution,zp);
+                        glm::vec3 p2(xp+resolution,yp+resolution,zp);
+                        glm::vec3 p3(xp+resolution,yp+resolution,zp+resolution);
+                        glm::vec3 p4(xp,yp+resolution,zp+resolution);
 
-                        glm::vec3 p5(xp-resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p6(xp+resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p7(xp+resolution/2,yp+resolution/2,zp-resolution/2);
-                        glm::vec3 p8(xp-resolution/2,yp+resolution/2,zp-resolution/2);
+                        glm::vec3 p5(xp,yp,zp);
+                        glm::vec3 p6(xp+resolution,yp,zp);
+                        glm::vec3 p7(xp+resolution,yp,zp+resolution);
+                        glm::vec3 p8(xp,yp,zp+resolution);
 
-                        vertices[v1].pos = p1;
-                        vertices[v2].pos = p2;
-                        vertices[v3].pos = p3;
-                        vertices[v4].pos = p4;
-                        vertices[v5].pos = p5;
-                        vertices[v6].pos = p6;
-                        vertices[v7].pos = p7;
-                        vertices[v8].pos = p8;
+                        vertices[v1] = p1;
+                        vertices[v2] = p2;
+                        vertices[v3] = p3;
+                        vertices[v4] = p4;
+                        vertices[v5] = p5;
+                        vertices[v6] = p6;
+                        vertices[v7] = p7;
+                        vertices[v8] = p8;
                     }
-                    buffer[1+(x*4)+width*4*y+(width*4*height)*l]>>=1;
+                    buffer[(x*4)+width*4*y+(width*4*height)*l+1]>>=1;
                 }
                 //Blue Channel
                 for(unsigned int d=0;d<32;d++)
                 {
-                    if(buffer[2+(x*4)+width*4*y+(width*4*height)*l]&1)
+                    if(buffer[(x*4)+width*4*y+(width*4*height)*l+2]&1)
                     {
-                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1+1))+(x+1);
-                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1+1))+(x+1);
+                        unsigned int z = (32*4*l+d+64);
+                        v1 = decMesh.getPointIndex(x,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = decMesh.getPointIndex(x+1,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = decMesh.getPointIndex(x+1,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = decMesh.getPointIndex(x,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
 
-                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1))+(x+1);
-                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+64))+((width+1+2)*(y+1))+(x+1+1);
-                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1+1);
-                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+64)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+64)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
+                        v5 = decMesh.getPointIndex(x,y,z);//((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
+                        v6 = decMesh.getPointIndex(x+1,y,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = decMesh.getPointIndex(x+1,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = decMesh.getPointIndex(x,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.setVoxelInside(Voxel3D(decMesh.getVoxelIndex(x,y,z),GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
-                        float zp = getAABB().min.z+l*32*4*resolution+(d+64)*resolution;
-                        glm::vec3 p1(xp-resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p2(xp+resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p3(xp+resolution/2,yp-resolution/2,zp-resolution/2);
-                        glm::vec3 p4(xp-resolution/2,yp-resolution/2,zp-resolution/2);
+                        float zp = getAABB().min.z+z*resolution;
+                        glm::vec3 p1(xp,yp+resolution,zp);
+                        glm::vec3 p2(xp+resolution,yp+resolution,zp);
+                        glm::vec3 p3(xp+resolution,yp+resolution,zp+resolution);
+                        glm::vec3 p4(xp,yp+resolution,zp+resolution);
 
-                        glm::vec3 p5(xp-resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p6(xp+resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p7(xp+resolution/2,yp+resolution/2,zp-resolution/2);
-                        glm::vec3 p8(xp-resolution/2,yp+resolution/2,zp-resolution/2);
+                        glm::vec3 p5(xp,yp,zp);
+                        glm::vec3 p6(xp+resolution,yp,zp);
+                        glm::vec3 p7(xp+resolution,yp,zp+resolution);
+                        glm::vec3 p8(xp,yp,zp+resolution);
 
-                        vertices[v1].pos = p1;
-                        vertices[v2].pos = p2;
-                        vertices[v3].pos = p3;
-                        vertices[v4].pos = p4;
-                        vertices[v5].pos = p5;
-                        vertices[v6].pos = p6;
-                        vertices[v7].pos = p7;
-                        vertices[v8].pos = p8;
+                        vertices[v1] = p1;
+                        vertices[v2] = p2;
+                        vertices[v3] = p3;
+                        vertices[v4] = p4;
+                        vertices[v5] = p5;
+                        vertices[v6] = p6;
+                        vertices[v7] = p7;
+                        vertices[v8] = p8;
                     }
-                    buffer[2+(x*4)+width*4*y+(width*4*height)*l]>>=1;
+                    buffer[(x*4)+width*4*y+(width*4*height)*l+2]>>=1;
                 }
                 //Alpha Channel
                 for(unsigned int d=0;d<32;d++)
                 {
-
-                    if(buffer[3+(x*4)+width*4*y+(width*4*height)*l]&1)
+                    if(buffer[(x*4)+width*4*y+(width*4*height)*l+3]&1)
                     {
-                        v1 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1+1))+(x+1);
-                        v2 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v3 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1+1))+(x+1+1);
-                        v4 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1+1))+(x+1);
+                        unsigned int z = (32*4*l+d+96);
+                        v1 = decMesh.getPointIndex(x,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1);
+                        v2 = decMesh.getPointIndex(x+1,y+1,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v3 = decMesh.getPointIndex(x+1,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1+1);
+                        v4 = decMesh.getPointIndex(x,y+1,z+1);//((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1+1))+(x+1);
 
-                        v5 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1))+(x+1);
-                        v6 = (((width+1+2)*(height+1+2))*(32*4*l+d+1+96))+((width+1+2)*(y+1))+(x+1+1);
-                        v7 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1+1);
-                        v8 = (((width+1+2)*(height+1+2))*((32*4*l+d+1+1+96)))+((width+1+2)*(y+1))+(x+1);
-                        decMesh.setVoxelInside(Voxel3D((32*4*l+d+1+96)*((width+2)*(height+2))+(y+1)*(width+2)+x+1+1,GridState::INSIDE));
+                        v5 = decMesh.getPointIndex(x,y,z);//((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1);
+                        v6 = decMesh.getPointIndex(x+1,y,z);//(((width+1+2)*(height+1+2))*(32*4*l+d+1))+((width+1+2)*(y+1))+(x+1+1);
+                        v7 = decMesh.getPointIndex(x+1,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1+1);
+                        v8 = decMesh.getPointIndex(x,y,z+1);//(((width+1+2)*(height+1+2))*((32*4*l+d+1+1)))+((width+1+2)*(y+1))+(x+1);
+                        decMesh.setVoxelInside(Voxel3D(decMesh.getVoxelIndex(x,y,z),GridState::INSIDE));
                         float xp = getAABB().min.x+x*resolution;
                         float yp = getAABB().min.y+y*resolution;
-                        float zp = getAABB().min.z+l*32*4*resolution+(d+96)*resolution;
-                        glm::vec3 p1(xp-resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p2(xp+resolution/2,yp-resolution/2,zp+resolution/2);
-                        glm::vec3 p3(xp+resolution/2,yp-resolution/2,zp-resolution/2);
-                        glm::vec3 p4(xp-resolution/2,yp-resolution/2,zp-resolution/2);
+                        float zp = getAABB().min.z+z*resolution;
+                        glm::vec3 p1(xp,yp+resolution,zp);
+                        glm::vec3 p2(xp+resolution,yp+resolution,zp);
+                        glm::vec3 p3(xp+resolution,yp+resolution,zp+resolution);
+                        glm::vec3 p4(xp,yp+resolution,zp+resolution);
 
-                        glm::vec3 p5(xp-resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p6(xp+resolution/2,yp+resolution/2,zp+resolution/2);
-                        glm::vec3 p7(xp+resolution/2,yp+resolution/2,zp-resolution/2);
-                        glm::vec3 p8(xp-resolution/2,yp+resolution/2,zp-resolution/2);
+                        glm::vec3 p5(xp,yp,zp);
+                        glm::vec3 p6(xp+resolution,yp,zp);
+                        glm::vec3 p7(xp+resolution,yp,zp+resolution);
+                        glm::vec3 p8(xp,yp,zp+resolution);
 
-                        vertices[v1].pos = p1;
-                        vertices[v2].pos = p2;
-                        vertices[v3].pos = p3;
-                        vertices[v4].pos = p4;
-                        vertices[v5].pos = p5;
-                        vertices[v6].pos = p6;
-                        vertices[v7].pos = p7;
-                        vertices[v8].pos = p8;
+                        vertices[v1] = p1;
+                        vertices[v2] = p2;
+                        vertices[v3] = p3;
+                        vertices[v4] = p4;
+                        vertices[v5] = p5;
+                        vertices[v6] = p6;
+                        vertices[v7] = p7;
+                        vertices[v8] = p8;
                     }
-                    buffer[3+(x*4)+width*4*y+(width*4*height)*l]>>=1;
+                    buffer[(x*4)+width*4*y+(width*4*height)*l+3]>>=1;
                 }
             }
         }

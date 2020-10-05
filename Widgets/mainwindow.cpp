@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->spinNumParticles,SIGNAL(valueChanged(int)),ui->canvas,SLOT(changeNumParticles(int)));
     connect(ui->chkGravity,SIGNAL(toggled(bool)),ui->canvas,SLOT(changeGravity(bool)));
     connect(ui->chkGPU,SIGNAL(toggled(bool)),ui->canvas,SLOT(changeGPU(bool)));
+    connect(ui->actionStart,SIGNAL(triggered()),ui->canvas,SLOT(startBenchmark()));
+    connect(ui->actionStop,SIGNAL(triggered(bool)),ui->canvas,SLOT(stopBenchmark()));
 
     mesh = NULL;
 }

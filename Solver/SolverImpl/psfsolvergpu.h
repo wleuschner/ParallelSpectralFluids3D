@@ -20,7 +20,30 @@ protected:
     void buildLaplace();
     void buildAdvection();
 private:
+    void calculateEnergy(unsigned int index);
+    void calculateVelocity();
+    void updateVelocity();
+    void externalForces();
+    void reconstructVelocityField();
+    void updateParticles();
+
+
+    void uploadAdvectionMatrices();
+    void uploadBasisCoeffs();
+    void uploadFaceSigns();
+    void uploadVelocityBasisField();
+    void uploadGravity();
+    void uploadEigenValues();
+    void uploadVelocityField();
+    void uploadEnergy();
+
+    ShaderProgram* historyComputeShader;
     ShaderProgram* volumeComputeShader;
+    ShaderProgram* volumeBlurXComputeShader;
+    ShaderProgram* volumeBlurYComputeShader;
+    ShaderProgram* volumeBlurZComputeShader;
+    ShaderProgram* blitProgram;
+
     unsigned int nEigenFunctionsAligned;
 
     uint32_t refreshParticles;
@@ -33,11 +56,19 @@ private:
     cl_kernel vel_update_kernel;
     cl_kernel advection_reduce_x_kernel;
     cl_kernel advection_reduce_y_kernel;
+    cl_kernel vel_field_reconstruct_kernel;
+    cl_kernel energy_kernel;
 
     cl_mem signBitStringHandle;
     cl_mem advectionMatrices;
     cl_mem advectionScratchBuffer;
+    cl_mem velocityUpdateBuffer;
     cl_mem velocityFieldBuffer;
+    cl_mem basisCoeffBuffer;
+    cl_mem velocityBasisFieldBuffer;
+    cl_mem eigenValuesBuffer;
+    cl_mem gravityBuffer;
+    cl_mem energyBuffer;
 
     cl_mem particlesBuffer;
 

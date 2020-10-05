@@ -18,12 +18,20 @@ uniform vec3 aabb_min;
 uniform vec3 aabb_max;
 uniform mat4 view_mat;
 uniform float step_size;
-uniform usampler3D volumeTexture;
+uniform float rnd;
+uniform vec3 jitter;
+layout(r16f) uniform sampler3D volumeTexture;
 
 layout(location=0) out vec4 frag_colour;
+in vec3 light_pos;
+
+float rand2D(in vec2 co){
+   return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453)-0.5;
+}
 
 void main()
 {
+    vec3 aabb_ext = vec3(aabb_max-aabb_min);
     vec3 ray_dir;
     ray_dir.xy = 2.0 * gl_FragCoord.xy / viewport_size.zw - vec2(1.0);
     ray_dir.x *= viewport_size.z/viewport_size.w;
@@ -54,29 +62,36 @@ void main()
     vec3 color = vec3(0.0);
     float alpha = 0.0;
     int maxSteps = 1024;
-    vec3 light_energy = vec3(0.0);
+    vec3 light_energy = vec3(0.0,0.0,0.0);
+    float shadowthresh = -log(0.001) / 1.0;
+    vec3 volVoxDims = aabb_ext/textureSize(volumeTexture,0);
+    float volVoxelSize = (volVoxDims.x)*(volVoxDims.y)*(volVoxDims.z);
     while (ray_length > 0 && maxSteps>0) {
-        float current_sample = texture(volumeTexture, position).r/1000.0;
+        float current_sample = (texture(volumeTexture, position).r/(volVoxelSize));
         if(current_sample>0.001)
         {
-            vec3 lvec = step_size*(position-light.pos);
-            vec3 lpos = light.pos;
+            vec3 lvec = step_size*(light_pos-position)/length(light_pos-position);
+            vec3 lpos = position;
             float shadow_dist = 0;
             for(int i=0;i<128;i++)
             {
                 lpos += lvec;
-                float light_sample = texture(volumeTexture, lpos).r/1000.0;
+                float light_sample = (texture(volumeTexture, lpos).r/(volVoxelSize));
                 shadow_dist+=light_sample;
+                if(shadow_dist>shadowthresh) break;
             }
-            float current_density = current_sample*step_size;
-            float shadowterm = exp(-shadow_dist*step_size);
+            float current_density = clamp(current_sample*step_size,0.0,1.0);
+            vec3 shadowterm = vec3(1.0,0.5,0.0)*exp(-clamp(shadow_dist*step_size,0.0,1.0));
             vec3 absorbed_light = vec3(shadowterm*current_density);
             light_energy+=absorbed_light*transmittance;
             transmittance *= 1.0-current_density;
+            if(transmittance<0.01) break;
+            light_energy = clamp(light_energy,vec3(0.0),vec3(1.0));
+            transmittance = clamp(transmittance,0.0,1.0);
         }
 
         ray_length -= step_size;
-        position += step_vector;
+        position += step_vector;//*(1.0+0.01*rnd*vec3(0.5*cos(position.x)+0.5,0.5*sin(position.y)+0.5,0.5*cos(-position.x)+0.5));
         maxSteps--;
     }
 

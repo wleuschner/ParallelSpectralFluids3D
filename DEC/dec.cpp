@@ -15,7 +15,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
 
         for(PointIterator vit=mesh.getPointIteratorBegin();vit<mesh.getPointIteratorEnd();vit++)
         {
-            if(vit->inside==GridState::INSIDE)
+            //if(vit->inside==GridState::INSIDE)
             {
                 for(unsigned int i=0;i<6;i++)
                 {
@@ -30,11 +30,11 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
                     for(unsigned int j=0;j<4;j++)
                     {
                         Face3D e1 = mesh.getFace(f.f[j]);
-                        if(e1.inside!=GridState::INSIDE) continue;
+                        //if(e1.inside!=GridState::INSIDE) continue;
                         for(unsigned int k=0;k<4;k++)
                         {
                             Face3D e2 = mesh.getFace(f.f[k]);
-                            if(e2.inside!=GridState::INSIDE) continue;
+                            //if(e2.inside!=GridState::INSIDE) continue;
                             if(e2.id==e1.id) continue;
 
                             double side1 = glm::length(f.center-e1.center);
@@ -42,7 +42,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
 
                             glm::dvec3 cross1 = glm::cross(e1.normal,e2.normal);
                             areaPrim += side1*side2*abs(glm::dot(normal1,cross1))*(f.f[j]!=0)*(f.f[k]!=0);
-                        }
+                       }
                     }
                     areaPrim/=2;
 
@@ -143,7 +143,7 @@ Eigen::SparseMatrix<double> hodge2(DECMesh3D& mesh,bool dual)
 
         for(VoxelIterator vit=mesh.getVoxelIteratorBegin();vit<mesh.getVoxelIteratorEnd();vit++)
         {
-            if(vit->inside==GridState::INSIDE)
+            //if(vit->inside==GridState::INSIDE)
             {
                 for(unsigned int i=0;i<6;i++)
                 {
@@ -204,7 +204,7 @@ Eigen::SparseMatrix<double> hodge1(DECMesh3D& mesh,bool dual)
 
     for(FaceIterator fit=mesh.getFaceIteratorBegin();fit!=mesh.getFaceIteratorEnd();fit++)
     {
-        if(fit->inside==GridState::INSIDE)
+        //if(fit->inside==GridState::INSIDE)
         {
             Edge3D e1 = mesh.getEdge(fit->e1);
             Edge3D e2 = mesh.getEdge(fit->e2);
@@ -415,7 +415,7 @@ Eigen::SparseMatrix<double> derivative1(DECMesh3D& mesh,bool dual)
         for(int i=0;i<mesh.getNumFaces();i++)
         {
             Face3D* face = &faces[i];
-            if(face->inside == GridState::INSIDE)
+            //if(face->inside == GridState::INSIDE)
             {
                 tripleList[i*4] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e1),mesh.getFaceIndex(*face),(face->e1>=0?1:-1));
                 tripleList[i*4+1] = Eigen::Triplet<double>(mesh.signedIdToIndex(face->e2),mesh.getFaceIndex(*face),(face->e2>=0?1:-1));
@@ -466,7 +466,7 @@ Eigen::SparseMatrix<double> derivative0(DECMesh3D& mesh,bool dual)
     d.reserve(Eigen::VectorXi::Constant(mesh.getNumEdges(),2));
     for(EdgeIterator it = mesh.getEdgeIteratorBegin();it!=mesh.getEdgeIteratorEnd();it++)
     {
-        if(it->inside==GridState::INSIDE)
+        //if(it->inside==GridState::INSIDE)
         {
             unsigned int eid = mesh.getEdgeIndex(*it);
             unsigned int v1 = it->v1;

@@ -9,10 +9,13 @@ public:
     ~Texture3D();
 
     void bind(unsigned int texUnit);
+    void bindFloatCompute(unsigned int texUnit);
     void unbind(unsigned int texUnit);
     void bindCompute(unsigned int texUnit);
     void upload(unsigned int w,unsigned int h,unsigned int d,void* data);
+    void uploadFloat(unsigned int w,unsigned int h,unsigned int d,void* data);
     void createRenderImage(unsigned int w,unsigned int h,unsigned int d);
+    void createFloatRenderImage(unsigned int w,unsigned int h,unsigned int d);
     void clearImage();
     void destroy();
 

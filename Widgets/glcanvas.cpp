@@ -29,6 +29,7 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
     QGLFormat format = QGLFormat::defaultFormat();
     format.setProfile(QGLFormat::CoreProfile);
     format.setVersion(4,5);
+    format.setSamples(16);
     QGLFormat::setDefaultFormat(format);
     create();
 
@@ -40,13 +41,12 @@ GLCanvas::GLCanvas(QWidget *parent) : QGLWidget(parent)
 
 void GLCanvas::startBenchmark()
 {
-    benchmark = true;
-    frameNoBenchmark = 0;
+    solver->startBenchmark(true);
 }
 
 void GLCanvas::stopBenchmark()
 {
-    benchmark = false;
+    solver->startBenchmark(false);
 }
 
 void GLCanvas::setMesh(Model* mesh)
@@ -311,7 +311,7 @@ void GLCanvas::paintGL()
             glDisable(GL_CULL_FACE);
             glDisable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE,GL_ONE);
+            glBlendFunc(GL_ONE_MINUS_SRC_ALPHA,GL_SRC_ALPHA);
 
             Particle::setVertexAttribs();
             Particle::enableVertexAttribs();
@@ -364,6 +364,7 @@ void GLCanvas::paintGL()
 void GLCanvas::resizeGL(int w, int h)
 {
     psfSolverGPU->viewport_size = glm::vec4(0.0,0.0,w,h);
+    psfSolverGPU->resize(w,h);
     projection = glm::perspectiveFovRH(45.0f,(float)w,(float)h,0.1f,100.0f);
 }
 

@@ -15,8 +15,8 @@ Texture::~Texture()
 void Texture::bind(unsigned int texUnit)
 {
     glActiveTexture(GL_TEXTURE0+texUnit);
-    glBindTexture(GL_TEXTURE_2D,id);
     glBindSampler(texUnit,sampler);
+    glBindTexture(GL_TEXTURE_2D,id);
 }
 
 void Texture::unbind(unsigned int texUnit)
@@ -43,9 +43,9 @@ void Texture::createRenderImage(unsigned int w,unsigned int h)
     this->width = w;
     this->height = h;
 
-    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA32UI,w,h,0,GL_RGBA_INTEGER,GL_UNSIGNED_INT,0);
-    glSamplerParameteri(sampler,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-    glSamplerParameteri(sampler,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,0);
+    glSamplerParameteri(sampler,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glSamplerParameteri(sampler,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glSamplerParameteri(sampler,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
     glSamplerParameteri(sampler,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
 }

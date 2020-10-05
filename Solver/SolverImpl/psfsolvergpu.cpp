@@ -6,12 +6,16 @@
 #include <viennacl/ocl/backend.hpp>
 #include <fstream>
 #include <string>
+#include <chrono>
 #include <CL/cl_gl.h>
 #include <CL/cl_gl_ext.h>
 #include <GL/glx.h>
 #include <QElapsedTimer>
-#include "../../Spectra/MatOp/SparseSymShiftSolve.h"
-#include "../../Spectra/SymEigsShiftSolver.h"
+#include <Eigen/Core>
+#undef Complex
+#undef Success
+#include "../../Spectra/MatOp/SparseGenRealShiftSolve.h"
+#include "../../Spectra/GenEigsRealShiftSolver.h"
 #include "../../DEC/dec.h"
 #define WARP_SHIFT 4
 #define GRP_SHIFT 4
@@ -84,6 +88,36 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         exit(-1);
     }
 
+    vel_field_reconstruct_kernel = clCreateKernel(program,"reconstruct_velocity_field",&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build kernel"<<std::endl;
+        exit(-1);
+    }
+
+    energy_kernel = clCreateKernel(program,"energy",&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        std::cout<<"Could not build kernel"<<std::endl;
+        exit(-1);
+    }
+
+    //Load History Compute Shader
+    Shader hist_compute(GL_COMPUTE_SHADER,"Res/Volume/history.comp");
+    if(!hist_compute.compile())
+    {
+        std::cout<<hist_compute.compileLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<hist_compute.compileLog()<<std::endl;
+    historyComputeShader = new ShaderProgram();
+    historyComputeShader->attachShader(hist_compute);
+    if(!historyComputeShader->link())
+    {
+        std::cout<<historyComputeShader->linkLog()<<std::endl;
+        exit(-1);
+    }
+
     //Load Volume Compute Shader
     Shader vol_compute(GL_COMPUTE_SHADER,"Res/Volume/volume.comp");
     if(!vol_compute.compile())
@@ -92,7 +126,6 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
         exit(-1);
     }
     std::cout<<vol_compute.compileLog()<<std::endl;
-
 
     volumeComputeShader = new ShaderProgram();
     volumeComputeShader->attachShader(vol_compute);
@@ -103,110 +136,231 @@ PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_que
     }
     std::cout<<volumeComputeShader->linkLog()<<std::endl;
 
+    //Load Volume Blur Compute Shader
+    Shader vol_blurx_compute(GL_COMPUTE_SHADER,"Res/Volume/blur_x.comp");
+    if(!vol_blurx_compute.compile())
+    {
+        std::cout<<vol_blurx_compute.compileLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<vol_blurx_compute.compileLog()<<std::endl;
+
+    volumeBlurXComputeShader = new ShaderProgram();
+    volumeBlurXComputeShader->attachShader(vol_compute);
+    if(!volumeBlurXComputeShader->link())
+    {
+        std::cout<<volumeBlurXComputeShader->linkLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<volumeBlurXComputeShader->linkLog()<<std::endl;
+
+    Shader vol_blury_compute(GL_COMPUTE_SHADER,"Res/Volume/blur_y.comp");
+    if(!vol_blury_compute.compile())
+    {
+        std::cout<<vol_blury_compute.compileLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<vol_blury_compute.compileLog()<<std::endl;
+
+    volumeBlurYComputeShader = new ShaderProgram();
+    volumeBlurYComputeShader->attachShader(vol_compute);
+    if(!volumeBlurYComputeShader->link())
+    {
+        std::cout<<volumeBlurYComputeShader->linkLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<volumeBlurYComputeShader->linkLog()<<std::endl;
+
+    Shader vol_blurz_compute(GL_COMPUTE_SHADER,"Res/Volume/blur_z.comp");
+    if(!vol_blurx_compute.compile())
+    {
+        std::cout<<vol_blurz_compute.compileLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<vol_blurz_compute.compileLog()<<std::endl;
+
+    volumeBlurZComputeShader = new ShaderProgram();
+    volumeBlurZComputeShader->attachShader(vol_compute);
+    if(!volumeBlurZComputeShader->link())
+    {
+        std::cout<<volumeBlurZComputeShader->linkLog()<<std::endl;
+        exit(-1);
+    }
+    std::cout<<volumeBlurZComputeShader->linkLog()<<std::endl;
+
+
+    //Load Blit Shader
+    Shader blitVert(GL_VERTEX_SHADER,"Res/Effects/Volume/volume.vert");
+    if(!blitVert.compile())
+    {
+        std::cout<<blitVert.compileLog()<<std::endl;
+    }
+    Shader blitFrag(GL_FRAGMENT_SHADER,"Res/Effects/Volume/blit.frag");
+    if(!blitFrag.compile())
+    {
+        std::cout<<blitFrag.compileLog()<<std::endl;
+    }
+    blitProgram = new ShaderProgram();
+    blitProgram->attachShader(blitVert);
+    blitProgram->attachShader(blitFrag);
+    if(!blitProgram->link())
+    {
+        std::cout<<blitProgram->linkLog()<<std::endl;
+    }
+    blitProgram->bind();
+
     refreshParticles = 60*10;
 }
 
 void PSFSolverGPU::integrate()
 {
     glFinish();
-    QElapsedTimer timer;
-    timer.start();
+    if(benchmarkFrameNo>maxFramesBenchmark)
+    {
+        startBenchmark(false);
+    }
+    if(isBenchmark)
+    {
+        benchmarkFrameNo++;
+    }
 
+    {
+        std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+        calculateEnergy(0);
+        calculateVelocity();
+        calculateEnergy(1);
+        updateVelocity();
+        externalForces();
+        reconstructVelocityField();
+        std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+        if(isBenchmark)
+        {
+            double t = std::chrono::duration<double,std::milli>(end-begin).count();
+            benchmarkSums[0] +=t;
+            benchmark_file<<t<<",";
+        }
+    }
+    {
+        std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+        updateParticles();
+        std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+        if(isBenchmark)
+        {
+            double t = std::chrono::duration<double,std::milli>(end-begin).count();
+            benchmarkSums[1] +=t;
+            benchmark_file<<t<<std::endl;
+        }
+    }
+    clFinish(cl_queue);
+}
+
+void PSFSolverGPU::calculateEnergy(unsigned int index)
+{
     cl_int res;
-    size_t global_work_size = nEigenFunctionsAligned/4;
-    size_t local_work_size = 256;
-    cl_mem basisCoeff_handle = vcl_basisCoeff.handle().opencl_handle();
-    cl_mem eigenVals_handle = vcl_eigenValues.handle().opencl_handle();
-    cl_mem gravity_handle = vcl_gravity.handle().opencl_handle();
-    cl_mem vel_handle = vcl_velocityField.handle().opencl_handle();
-    cl_mem vel2_handle = vcl_velocity.handle().opencl_handle();
-    cl_mem e1_handle = vcl_e1.handle().opencl_handle();
-    cl_mem e2_handle = vcl_e1.handle().opencl_handle();
+    size_t global_work_size[] = {nEigenFunctionsAligned/8,1,1};
+    size_t local_work_size[] = {nEigenFunctionsAligned/8,1,1};
 
-
-    double argGravity = gravityActive==true?1.0:0.0;
-
-    vcl_e1 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
-
-    glm::uvec4 dims = glm::uvec4(nEigenFunctionsAligned,nEigenFunctionsAligned,nEigenFunctionsAligned,0);
-    size_t advection_reduce_work_size[] = {ceil(nEigenFunctionsAligned/4.0),nEigenFunctions,nEigenFunctions};
-    size_t advection_reduce_local_size[] = {ceil(nEigenFunctionsAligned/8.0),1,1};
-
-    clSetKernelArg(advection_reduce_x_kernel,0,sizeof(cl_mem),&advectionMatrices);
-    clSetKernelArg(advection_reduce_x_kernel,1,sizeof(cl_mem),&advectionScratchBuffer);
-    clSetKernelArg(advection_reduce_x_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
-    res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_x_kernel,3,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
+    clSetKernelArg(energy_kernel,0,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(energy_kernel,1,sizeof(cl_mem),&energyBuffer);
+    clSetKernelArg(energy_kernel,2,sizeof(cl_uint),&index);
+    clSetKernelArg(energy_kernel,3,sizeof(cl_double)*(2*local_work_size[0]+BANK_OFFSET(2*local_work_size[0])),0);
+    res = clEnqueueNDRangeKernel(cl_queue,energy_kernel,1,0,global_work_size,local_work_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
         std::cout<<"Unable to execute Kernel "<<res<<std::endl;
     }
+}
+
+void PSFSolverGPU::calculateVelocity()
+{
+    cl_event event;
+    cl_int res;
+
+    size_t advection_reduce_work_size[] = {nEigenFunctionsAligned/8u,
+                                           nEigenFunctions,
+                                           nEigenFunctions};
+    size_t advection_reduce_local_size[] = {nEigenFunctionsAligned/8u,1,1};
+
+    clSetKernelArg(advection_reduce_x_kernel,0,sizeof(cl_mem),&advectionMatrices);
+    clSetKernelArg(advection_reduce_x_kernel,1,sizeof(cl_mem),&advectionScratchBuffer);
+    clSetKernelArg(advection_reduce_x_kernel,2,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(advection_reduce_x_kernel,3,sizeof(cl_double)*(2*advection_reduce_local_size[0]+BANK_OFFSET(2*advection_reduce_local_size[0])),NULL);
+    res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_x_kernel,3,0,advection_reduce_work_size,advection_reduce_local_size,0,0,&event);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel "<<res<<std::endl;
+    }
+
     clSetKernelArg(advection_reduce_y_kernel,0,sizeof(cl_mem),&advectionScratchBuffer);
-    clSetKernelArg(advection_reduce_y_kernel,1,sizeof(cl_mem),&vel2_handle);
-    clSetKernelArg(advection_reduce_y_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_double)*(nEigenFunctionsAligned/4+BANK_OFFSET(nEigenFunctionsAligned/4)),NULL);
+    clSetKernelArg(advection_reduce_y_kernel,1,sizeof(cl_mem),&velocityUpdateBuffer);
+    clSetKernelArg(advection_reduce_y_kernel,2,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(advection_reduce_y_kernel,3,sizeof(cl_double)*(2*advection_reduce_local_size[0]+BANK_OFFSET(2*advection_reduce_local_size[0])),NULL);
     res = clEnqueueNDRangeKernel(cl_queue,advection_reduce_y_kernel,2,0,advection_reduce_work_size,advection_reduce_local_size,0,0,0);
     if(res!=CL_SUCCESS)
     {
         std::cout<<"Unable to execute Kernel "<<res<<std::endl;
     }
+}
 
-    /*
-    viennacl::scalar<double> val1 = 0.0;
-    cl_mem val1_handle = val1.handle().opencl_handle();
-    clSetKernelArg(vel_update_kernel,0,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(vel_update_kernel,1,sizeof(cl_mem),&val1_handle);
-    clSetKernelArg(vel_update_kernel,2,sizeof(cl_mem),&energy_handle);
-    clSetKernelArg(vel_update_kernel,3,sizeof(cl_double),&timeStep);
-    for(unsigned int k=0;k<nEigenFunctions;k++)
-    {
-        val1 = viennacl::linalg::inner_prod(vcl_basisCoeff,viennacl::linalg::prod(vcl_advection[k],vcl_basisCoeff));
-        clSetKernelArg(vel_update_kernel,4,sizeof(cl_uint),&k);
-        res = clEnqueueNDRangeKernel(cl_queue,vel_update_kernel,1,0,&global_work_size,0,0,0,0);
-        if(res!=CL_SUCCESS)
-        {
-            std::cout<<"Unable to execute Kernel "<<res<<std::endl;
-        }
-        //vcl_velocity(k) += viennacl::linalg::inner_prod(vcl_basisCoeff,viennacl::linalg::prod(vcl_advection[k],vcl_basisCoeff));
-    }*/
-    //vcl_basisCoeff += vcl_timestep*vcl_velocity;
-
-    clSetKernelArg(vel_update_kernel,0,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(vel_update_kernel,1,sizeof(cl_mem),&vel2_handle);
+void PSFSolverGPU::updateVelocity()
+{
+    cl_int res;
+    size_t global_work_size = nEigenFunctionsAligned/4;
+    clSetKernelArg(vel_update_kernel,0,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(vel_update_kernel,1,sizeof(cl_mem),&velocityUpdateBuffer);
     clSetKernelArg(vel_update_kernel,2,sizeof(cl_double),&timeStep);
     res = clEnqueueNDRangeKernel(cl_queue,vel_update_kernel,1,0,&global_work_size,0,0,0,0);
     if(res!=CL_SUCCESS)
     {
         std::cout<<"Unable to execute Kernel "<<res<<std::endl;
     }
+}
 
-    vcl_e2 = viennacl::linalg::inner_prod(vcl_basisCoeff,vcl_basisCoeff);
 
-    //basisCoeff *= vcl_e1/vcl_e2;
+void PSFSolverGPU::externalForces()
+{
+    cl_int res;
+    size_t global_work_size = nEigenFunctionsAligned/4;
+    double argGravity = gravityActive==true?1.0:0.0;
 
-    global_work_size = nEigenFunctions/4;
-    clSetKernelArg(visc_kernel,0,sizeof(cl_mem),&e1_handle);
-    clSetKernelArg(visc_kernel,1,sizeof(cl_mem),&e2_handle);
-    clSetKernelArg(visc_kernel,2,sizeof(cl_mem),&basisCoeff_handle);
-    clSetKernelArg(visc_kernel,3,sizeof(cl_mem),&eigenVals_handle);
-    clSetKernelArg(visc_kernel,4,sizeof(cl_mem),&gravity_handle);
-    clSetKernelArg(visc_kernel,5,sizeof(cl_double),&viscosity);
-    clSetKernelArg(visc_kernel,6,sizeof(cl_double),&timeStep);
-    clSetKernelArg(visc_kernel,7,sizeof(cl_double),&argGravity);
+    clSetKernelArg(visc_kernel,0,sizeof(cl_mem),&energyBuffer);
+    clSetKernelArg(visc_kernel,1,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(visc_kernel,2,sizeof(cl_mem),&eigenValuesBuffer);
+    clSetKernelArg(visc_kernel,3,sizeof(cl_mem),&gravityBuffer);
+    clSetKernelArg(visc_kernel,4,sizeof(cl_double),&viscosity);
+    clSetKernelArg(visc_kernel,5,sizeof(cl_double),&timeStep);
+    clSetKernelArg(visc_kernel,6,sizeof(cl_double),&argGravity);
     res = clEnqueueNDRangeKernel(cl_queue,visc_kernel,1,0,&global_work_size,0,0,0,0);
     if(res!=CL_SUCCESS)
     {
         std::cout<<"Unable to execute Kernel "<<res<<std::endl;
     }
-    vcl_velocityField = viennacl::linalg::prod(vcl_velBasisField,vcl_basisCoeff);
+}
 
-    cl_int ret;
-    unsigned int workGroupSize = 128;
-    unsigned int workGroups = std::ceil(maxParticles/float(workGroupSize));
+void PSFSolverGPU::reconstructVelocityField()
+{
+    cl_int res;
+    size_t faces = velBasisField.rows();
+    size_t global_work_size[] = {nEigenFunctionsAligned/8,faces};
+    size_t local_work_size[] = {nEigenFunctionsAligned/8,1,1};
+    clSetKernelArg(vel_field_reconstruct_kernel,0,sizeof(cl_mem),&velocityBasisFieldBuffer);
+    clSetKernelArg(vel_field_reconstruct_kernel,1,sizeof(cl_mem),&velocityFieldBuffer);
+    clSetKernelArg(vel_field_reconstruct_kernel,2,sizeof(cl_mem),&basisCoeffBuffer);
+    clSetKernelArg(vel_field_reconstruct_kernel,3,sizeof(cl_double)*(2*local_work_size[0]+BANK_OFFSET(2*local_work_size[0])),NULL);
+    res = clEnqueueNDRangeKernel(cl_queue,vel_field_reconstruct_kernel,2,0,global_work_size,local_work_size,0,0,0);
+    if(res!=CL_SUCCESS)
+    {
+        std::cout<<"Unable to execute Kernel "<<res<<std::endl;
+    }
+}
+
+void PSFSolverGPU::updateParticles()
+{
+    cl_int res;
     cl_event event;
 
-    particlesBuffer = clCreateFromGLBuffer(cl_context_id,CL_MEM_READ_WRITE,particles->id,&ret);
-    if(ret!=CL_SUCCESS)
+    particlesBuffer = clCreateFromGLBuffer(cl_context_id,CL_MEM_READ_WRITE,particles->id,&res);
+    if(res!=CL_SUCCESS)
     {
         std::cout<<"Could not create CLGL Buffer Object!"<<std::endl;
         exit(-1);
@@ -220,16 +374,15 @@ void PSFSolverGPU::integrate()
         exit(-1);
     }
     glm::uvec3 random = glm::uvec3(rand(),rand(),rand());
-    dims = glm::uvec4(decMesh.getDimensions(),0);
+    glm::uvec4 dims = glm::uvec4(decMesh.getDimensions(),0);
     glm::vec4 aabb_min = glm::vec4(mesh->getAABB().min,0.0);
     glm::vec4 aabb_max = glm::vec4(mesh->getAABB().max,0.0);
     glm::vec4 aabb_extent = glm::vec4(mesh->getAABB().getExtent(),0.0);
     float resf = resolution;
     cl_float timestep = timeStep;
-    global_work_size = maxParticles;
-    local_work_size = {256};
+    size_t global_work_size = maxParticles;
     clSetKernelArg(interp_kernel,0,sizeof(cl_mem),&particlesBuffer);
-    clSetKernelArg(interp_kernel,1,sizeof(cl_mem),&vel_handle);
+    clSetKernelArg(interp_kernel,1,sizeof(cl_mem),&velocityFieldBuffer);
     clSetKernelArg(interp_kernel,2,sizeof(cl_mem),&signBitStringHandle);
     clSetKernelArg(interp_kernel,3,sizeof(cl_uint4),&dims);
     clSetKernelArg(interp_kernel,4,sizeof(cl_float4),&aabb_min);
@@ -257,8 +410,6 @@ void PSFSolverGPU::integrate()
         exit(-1);
     }
     clReleaseMemObject(particlesBuffer);
-    clFinish(cl_queue);
-    std::cout<<timer.elapsed()<<std::endl;
 }
 
 void PSFSolverGPU::buildLaplace()
@@ -266,6 +417,7 @@ void PSFSolverGPU::buildLaplace()
     Eigen::SparseMatrix<double> mat = 1.0*derivative1(decMesh,false)*hodge2(decMesh,true)*derivative1(decMesh,true)*hodge2(decMesh,false);
     Eigen::SparseMatrix<double> bound = derivative2(decMesh);
     curl = derivative1(decMesh,true)*hodge2(decMesh,false);
+
     for(int k=0;k<bound.outerSize();k++)
     {
         unsigned int nVoxel=0;
@@ -275,7 +427,7 @@ void PSFSolverGPU::buildLaplace()
         }
         if(nVoxel!=2)
         {
-            mat.prune([k](int i,int j,double v){return !(i==k||j==k);});
+            mat.prune([k](int i,int j,double v){return !(i==k);});
         }
     }
     //mat.pruned();
@@ -284,29 +436,28 @@ void PSFSolverGPU::buildLaplace()
     velBasisField.resize(decMesh.getNumFaces(),nEigenFunctions);
     bool decompositionDone=false;
     unsigned int foundEigenValues=0;
-    double omega = 0.0;
+    double omega = 0.1;
     while(foundEigenValues<nEigenFunctions)
     {
         try
         {
-            Spectra::SparseSymShiftSolve<double> op(mat);
-            Spectra::SymEigsShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseSymShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
+            Spectra::SparseGenRealShiftSolve<double> op(mat);
+            Spectra::GenEigsRealShiftSolver<double,Spectra::WHICH_LM,Spectra::SparseGenRealShiftSolve<double>> solver(&op,nEigenFunctions,2*nEigenFunctions,omega);
             solver.init();
 
             int nconv = solver.compute(1000,1e-10,Spectra::WHICH_SM);
             if(solver.info()==Spectra::SUCCESSFUL)
             {
-
-                Eigen::VectorXd tempEigenValues = solver.eigenvalues().real();
-                Eigen::MatrixXd tempEigenVectors = solver.eigenvectors().real();
+                Eigen::VectorXcd tempEigenValues = solver.eigenvalues();
+                Eigen::MatrixXcd tempEigenVectors = solver.eigenvectors();
                 bool onlyZero=true;
                 for(unsigned int i=0;i<nconv && foundEigenValues<nEigenFunctions;i++)
                 {
-                    if(tempEigenValues(i)<0.0) continue;
-                    if(std::abs(tempEigenValues(i))<1e-10 || std::abs(tempEigenValues(i))>1e+10) continue;
+                    if(tempEigenValues(i).real()<0) continue;
+                    if((std::abs(1.0/tempEigenValues(i).real())<1e-10 || std::abs(1.0/tempEigenValues(i).real())>1e+10)) continue;
 
-                    Eigen::VectorXd backProjection = mat*tempEigenVectors.col(i);
-                    if(backProjection.isApprox(tempEigenValues(i)*tempEigenVectors.col(i),1))
+                    Eigen::VectorXd backProjection = mat*tempEigenVectors.col(i).real();
+                    if(backProjection.isApprox(tempEigenValues(i).real()*tempEigenVectors.col(i).real(),0.1))
                     //if(std::abs(1.0/tempEigenValues(i))>1e-10 && std::abs(1.0/tempEigenValues(i))<1e+10)
                     {
                         bool doubleEv = false;
@@ -326,17 +477,17 @@ void PSFSolverGPU::buildLaplace()
                         std::cout<<"ONE GARBAGE "<<tempEigenValues(i)<<std::endl;
                         //if(tempEigenValues(i)!=0.0)
                         {
-                            omega = tempEigenValues(i);
+                            omega = tempEigenValues(i).real();
                             onlyZero = false;
                         }
-                        eigenValues(foundEigenValues) = tempEigenValues(i);
-                        velBasisField.col(foundEigenValues) = tempEigenVectors.col(i);
+                        eigenValues(foundEigenValues) = tempEigenValues(i).real();
+                        velBasisField.col(foundEigenValues) = tempEigenVectors.col(i).real();
                         foundEigenValues++;
                         }
                     }
-                    //else
+                    else
                     {
-                        //std::cout<<"ZERO GARBAGE "<<tempEigenValues(i)<<std::endl;
+                        std::cout<<"ZERO GARBAGE "<<tempEigenValues(i).real()<<std::endl;
                     }
                 }
                 if(onlyZero)
@@ -351,7 +502,7 @@ void PSFSolverGPU::buildLaplace()
         }
         catch(std::runtime_error e)
         {
-            omega+=std::numeric_limits<double>::epsilon();
+            omega+=0.1;
             std::cout<<"Increase omega"<<std::endl;
         }
     }
@@ -373,19 +524,9 @@ void PSFSolverGPU::buildLaplace()
     }
     gravity = velBasisField.transpose()*gravity;
 
-    std::vector<unsigned int>& signBitString = decMesh.getSignBitString();
-    cl_int ret;
-    signBitStringHandle = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,signBitString.size()*sizeof(unsigned int),signBitString.data(),&ret);
-    if(ret!=CL_SUCCESS)
-    {
-        printf("Could not allocate Buffer");
-        exit(ret);
-    }
-
     std::vector<Vertex> vertices = mesh->getVertices();
 
-    vorticityField = Eigen::VectorXd::Zero(decMesh.getNumEdges());
-    vorticityField = Eigen::VectorXd::Zero(decMesh.getNumEdges());
+    vorticityField = Eigen::VectorXf::Zero(decMesh.getNumEdges());
     //vorticityField.setRandom();
     //glm::uvec3 dims = decMesh.getDimensions();
     //vorticityField(decMesh.getNumEdges()/2) = 2e+64;
@@ -405,7 +546,7 @@ void PSFSolverGPU::buildLaplace()
                 if((p1.x>=0.0&&p1.x<=0.0&&p1.y==0.0&&p2.x>=0.0&&p2.x<=0.0&&p2.y==0.0))
                 {
 
-                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*1;
+                    vorticityField(it->id) = ((p1-p2).z>0?1.0:-1.0)*100;
                 }
                 //if((p1.x>=0.5&&p1.x<=0.7&&p1.y==0.0&&p2.x>=0.5&&p2.x<=0.7&&p2.y==0.0))
                 //{
@@ -421,7 +562,7 @@ void PSFSolverGPU::buildLaplace()
     }
     setInitialVorticityField(vorticityField);
 
-    velocityField = Eigen::VectorXd::Zero(decMesh.getNumFaces());
+    velocityField = Eigen::VectorXf::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
     for(FaceIterator it=decMesh.getFaceIteratorBegin();it!=decMesh.getFaceIteratorEnd();it++)
     {
@@ -431,44 +572,26 @@ void PSFSolverGPU::buildLaplace()
             {
                 AABB aabb = mesh->getAABB();
                 if(glm::dot(it->normal,glm::dvec3(0.0,1.0,0.0)) &&
-                   it->center.y<aabb.min.y+0.8 && abs(it->center.x)<0.4 && abs(it->center.z)<0.4)
-                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*0.1;
-
+                   it->center.y<aabb.min.y+0.8 /*&& abs(it->center.x)<0.4 && abs(it->center.z)<0.4*/)
+                        velocityField(decMesh.getFaceIndex(*it)) = (it->normal.y>0?-1:1)*1.0;
             }
         }
     }
     setInitialVelocityField(velocityField);
-    vcl_vortBasisField.resize(vortBasisField.rows(),vortBasisField.cols());
-    vcl_velBasisField.resize(velBasisField.rows(),velBasisField.cols());
-    vcl_gravity.resize(gravity.size());
-    vcl_vorticityField.resize(vorticityField.rows(),vorticityField.cols());
-    vcl_velocityField.resize(velocityField.rows(),velocityField.cols());
-    vcl_basisCoeff.resize(basisCoeff.size());
-    vcl_eigenValues.resize(eigenValues.size());
 
-    viennacl::copy(vortBasisField,vcl_vortBasisField);
-    viennacl::copy(velBasisField,vcl_velBasisField);
-    viennacl::copy(gravity,vcl_gravity);
-    viennacl::copy(vorticityField,vcl_vorticityField);
-    viennacl::copy(velocityField,vcl_velocityField);
-    viennacl::copy(eigenValues,vcl_eigenValues);
-    viennacl::copy(basisCoeff,vcl_basisCoeff);
-    vcl_velocity = viennacl::zero_vector<double>(nEigenFunctions);
-    vcl_e1 = 0.0;
-    vcl_e2 = 0.0;
-
-    for(unsigned int i=0;i<400000;i++)
+    /*for(unsigned int i=0;i<400000;i++)
     {
         glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
-        pos.y= mesh->getAABB().min.y+0.2f;
-        //pos.y+=((rand()%1024)/1024.0-0.5)*0.5;
+        //pos.y= mesh->getAABB().min.y+0.2f;
+        pos.y+=((rand()%1024)/1024.0-0.5)*0.25;
         //pos.y+=((rand()%1024)/1024.0-0.5)*0.75;
-        pos.x+=((rand()%1024)/1024.0-0.5)*1.0;
-        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*1.0;
+        //pos.x+=((rand()%1024)/1024.0-0.5)*1.0;
+        pos.x+=((rand()%1024)/1024.0-0.5)*0.25;
+        pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.25;
+        //pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*1.0;
         //pos = glm::dvec3(0.0);
         addParticle(Particle(lifeTime*((rand()%1024)/1024.0),pos));
-    }
-    particles->syncGPU();
+    }*/
 }
 
 void PSFSolverGPU::buildAdvection()
@@ -484,7 +607,7 @@ void PSFSolverGPU::buildAdvection()
         advection[i].setZero();
     }
     std::vector<Vertex> vertices = mesh->getVertices();
-    double scale = 0.5*0.5;//((decMesh.resolution/2)*(decMesh.resolution/2));
+    double scale = /*0.5*0.5;*/((decMesh.resolution/2)*(decMesh.resolution/2));
     for(VoxelIterator fit=decMesh.getVoxelIteratorBegin();fit!=decMesh.getVoxelIteratorEnd();fit++)
     {
         if(fit->inside==GridState::INSIDE)
@@ -583,16 +706,41 @@ void PSFSolverGPU::buildAdvection()
     {
         for(unsigned int j=0;j<nEigenFunctions;j++)
         {
-            advection[i].col(j) = 1.0/eigenValues(i)*wedges[i].col(j);
+            advection[i].col(j) = (1.0/eigenValues(i))*wedges[i].col(j);
         }
     }
 
-    nEigenFunctionsAligned = nEigenFunctions + (4-nEigenFunctions%4)*(nEigenFunctions%4==0?0:1);
+    for(unsigned int i=0;i<eigenValues.rows();i++)
+    {
+        advection[i] = vortBasisField.transpose()*advection[i];
+    }
+    uint nextPower2 = pow(2, ceil(log(nEigenFunctions)/log(2)));
+    nEigenFunctionsAligned = nEigenFunctions + (nextPower2-nEigenFunctions%nextPower2)*(nEigenFunctions%nextPower2==0?0:1);
+    uploadFaceSigns();
+    uploadAdvectionMatrices();
+    uploadVelocityBasisField();
+    uploadVelocityField();
+    uploadBasisCoeffs();
+    uploadGravity();
+    uploadEigenValues();
+    uploadEnergy();
+    particles->syncGPU();
+}
+
+void PSFSolverGPU::uploadAdvectionMatrices()
+{
     unsigned int gpuUploadSize = nEigenFunctions*nEigenFunctions*nEigenFunctionsAligned;
     std::vector<double> gpuUpload;
     gpuUpload.resize(gpuUploadSize);
     memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
     cl_int ret;
+    velocityUpdateBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,(nEigenFunctionsAligned)*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+
     advectionScratchBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,(nEigenFunctions*nEigenFunctionsAligned)*sizeof(double),gpuUpload.data(),&ret);
     if(ret!=CL_SUCCESS)
     {
@@ -600,16 +748,123 @@ void PSFSolverGPU::buildAdvection()
         exit(ret);
     }
 
-    for(unsigned int i=0;i<eigenValues.rows();i++)
+
+    for(unsigned int i=0;i<nEigenFunctions;i++)
     {
-        advection[i] = vortBasisField.transpose()*advection[i];
+        Eigen::MatrixXd advectionTemp = advection[i].transpose();
         #pragma omp parallel for
         for(unsigned int j=0;j<nEigenFunctions;j++)
         {
-            memcpy(gpuUpload.data() + i*(nEigenFunctions*nEigenFunctionsAligned)+j*(nEigenFunctionsAligned),advection[i].col(j).data(),sizeof(double)*nEigenFunctions);
+            memcpy(gpuUpload.data() + i*(nEigenFunctions*nEigenFunctionsAligned)+j*(nEigenFunctionsAligned),advectionTemp.col(j).data(),sizeof(double)*nEigenFunctions);
         }
     }
+
     advectionMatrices = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadBasisCoeffs()
+{
+    unsigned int gpuUploadSize = nEigenFunctionsAligned;
+    std::vector<double> gpuUpload;
+    gpuUpload.resize(gpuUploadSize);
+    memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
+    cl_int ret;
+    memcpy(gpuUpload.data(),basisCoeff.data(),sizeof(double)*nEigenFunctions);
+    basisCoeffBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadFaceSigns()
+{
+    std::vector<unsigned int>& signBitString = decMesh.getSignBitString();
+    cl_int ret;
+    signBitStringHandle = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,signBitString.size()*sizeof(unsigned int),signBitString.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadVelocityBasisField()
+{
+    unsigned int gpuUploadSize = velBasisField.rows()*nEigenFunctionsAligned;
+    std::vector<double> gpuUpload;
+    gpuUpload.resize(gpuUploadSize);
+    memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
+    cl_int ret;
+
+    Eigen::MatrixXd velBasisFieldTemp = velBasisField.transpose();
+    for(unsigned int i=0;i<velBasisFieldTemp.cols();i++)
+    {
+        memcpy(gpuUpload.data() + i*(nEigenFunctionsAligned),velBasisFieldTemp.col(i).data(),sizeof(double)*nEigenFunctions);
+    }
+
+    velocityBasisFieldBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadGravity()
+{
+    unsigned int gpuUploadSize = nEigenFunctionsAligned;
+    std::vector<double> gpuUpload;
+    gpuUpload.resize(gpuUploadSize);
+    memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
+    cl_int ret;
+    memcpy(gpuUpload.data(),gravity.data(),sizeof(double)*nEigenFunctions);
+    gravityBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadEigenValues()
+{
+    unsigned int gpuUploadSize = nEigenFunctionsAligned;
+    std::vector<double> gpuUpload;
+    gpuUpload.resize(gpuUploadSize);
+    memset(gpuUpload.data(),0,sizeof(double)*gpuUploadSize);
+    cl_int ret;
+    memcpy(gpuUpload.data(),eigenValues.data(),sizeof(double)*nEigenFunctions);
+    eigenValuesBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,gpuUpload.size()*sizeof(double),gpuUpload.data(),&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadVelocityField()
+{
+    unsigned int gpuUploadSize = velBasisField.rows();
+    cl_int ret;
+    velocityFieldBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE,gpuUploadSize*sizeof(float),0,&ret);
+    if(ret!=CL_SUCCESS)
+    {
+        printf("Could not allocate Buffer");
+        exit(ret);
+    }
+}
+
+void PSFSolverGPU::uploadEnergy()
+{
+    cl_int ret;
+    energyBuffer = clCreateBuffer(cl_context_id,CL_MEM_READ_WRITE,2*sizeof(double),0,&ret);
     if(ret!=CL_SUCCESS)
     {
         printf("Could not allocate Buffer");
@@ -619,41 +874,141 @@ void PSFSolverGPU::buildAdvection()
 
 void PSFSolverGPU::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
 {
+    /*
+    particles->bind();
+    Particle::setVertexAttribs();
+    Particle::enableVertexAttribs();
+    program->bind();
+    program->uploadMat4("pvm",pvm);
+    program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
+    glDrawArrays(GL_POINTS,0,particles->getNumParticles());
+    return;*/
+
+    float rnd = (rand()%(16<<2))/float(16<<2);
+    glm::vec3 jitter = glm::normalize(glm::vec3((rand()%1024)/1024.0,(rand()%1024)/1024.0,(rand()%1024)/1024.0));
+    glm::vec3 dims2 = glm::vec3(128,128,128);
     glm::vec3 extent = mesh->getAABB().getExtent();
-    volumeTexture->clearImage();
-    volumeTexture->bindCompute(0);
-    particles->bindCompute(1);
-    volumeComputeShader->bind();
-    volumeComputeShader->uploadVec3("aabb_min",mesh->getAABB().min);
-    volumeComputeShader->uploadVec3("aabb_extent",extent);
-    volumeComputeShader->uploadInt("volumeTexture",0);
-    volumeComputeShader->dispatch(maxParticles/1024,1,1,maxParticles,1,1);
-    int result;
-    if(result!=GL_NO_ERROR)
-    {
-        std::cout<<"Compute Error"<<result<<std::endl;
-    }
+
+    histogramTexture->clearImage();
+    particles->bindCompute(0);
+    histogramTexture->bindCompute(1);
+    historyComputeShader->bind();
+    historyComputeShader->uploadVec3("aabb_min",mesh->getAABB().min);
+    historyComputeShader->uploadVec3("aabb_extent",extent);
+    historyComputeShader->uploadInt("volumeTexture",1);
+    historyComputeShader->dispatch(maxParticles/1024,1,1,maxParticles,1,1);
     GLsync syncObj;
     glMemoryBarrier(GL_ALL_BARRIER_BITS);
     syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
     glClientWaitSync(syncObj,0,1000*1000*1000*2);
     glDeleteSync(syncObj);
 
+    histogramTexture->bindCompute(0);
+    volumeTextures[0]->bindFloatCompute(1);
+    volumeComputeShader->bind();
+    volumeComputeShader->uploadInt("histogramTexture",0);
+    volumeComputeShader->uploadInt("volumeTexture",1);
+    volumeComputeShader->uploadScalar("lifeTime",lifeTime);
+    volumeComputeShader->dispatch(256,256,1,1,1,1);
+
+    int result;
+    if(result!=GL_NO_ERROR)
+    {
+        std::cout<<"Compute Error"<<result<<std::endl;
+    }
+    glMemoryBarrier(GL_ALL_BARRIER_BITS);
+    syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+    glClientWaitSync(syncObj,0,1000*1000*1000*2);
+    glDeleteSync(syncObj);
+
+    unsigned int currentOutTex = 0;
+    /*for(unsigned int i=0;i<8;i++)
+    {
+        volumeTextures[currentOutTex]->bindFloatCompute(0);
+        volumeTextures[currentOutTex^1]->bindFloatCompute(1);
+        volumeBlurXComputeShader->bind();
+        volumeBlurXComputeShader->uploadInt("histogramTexture",0);
+        volumeBlurXComputeShader->uploadInt("volumeTexture",1);
+        volumeBlurXComputeShader->dispatch(1024,1024,1,1,1,1);
+
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+        syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+        glClientWaitSync(syncObj,0,1000*1000*1000*2);
+        glDeleteSync(syncObj);
+        currentOutTex^=1;
+
+        volumeTextures[currentOutTex]->bindFloatCompute(0);
+        volumeTextures[currentOutTex^1]->bindFloatCompute(1);
+        volumeBlurYComputeShader->bind();
+        volumeBlurYComputeShader->uploadInt("histogramTexture",0);
+        volumeBlurYComputeShader->uploadInt("volumeTexture",1);
+        volumeBlurYComputeShader->dispatch(1024,1024,1,1,1,1);
+
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+        syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+        glClientWaitSync(syncObj,0,1000*1000*1000*2);
+        glDeleteSync(syncObj);
+        currentOutTex^=1;
+
+        volumeTextures[currentOutTex]->bindFloatCompute(0);
+        volumeTextures[currentOutTex^1]->bindFloatCompute(1);
+        volumeBlurZComputeShader->bind();
+        volumeBlurZComputeShader->uploadInt("histogramTexture",0);
+        volumeBlurZComputeShader->uploadInt("volumeTexture",1);
+        volumeBlurZComputeShader->dispatch(1024,1024,1,1,1,1);
+
+        glMemoryBarrier(GL_ALL_BARRIER_BITS);
+        syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE,0);
+        glClientWaitSync(syncObj,0,1000*1000*1000*2);
+        glDeleteSync(syncObj);
+        currentOutTex^=1;
+    }*/
+
+    historyBuffer[currentHistory]->bind();
+    glClear(GL_COLOR_BUFFER_BIT);
     glBindBuffer(GL_ARRAY_BUFFER,fullscreenVBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,fullscreenIBO);
     glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,sizeof(glm::vec4),(void*)0);
-    volumeTexture->bind(0);
+    volumeTextures[0]->bind(0);
     program->bind();
+    program->uploadScalar("rnd",rnd);
+    program->uploadVec3("jitter",jitter);
     program->uploadVec4("viewport_size",viewport_size);
     program->uploadVec3("camera_position",camera_position);
     program->uploadMat4("view_mat",view_mat);
-    program->uploadScalar("step_size",0.001);
+    program->uploadScalar("step_size",extent.x/256.0);
     program->uploadVec3("aabb_min",mesh->getAABB().min);
     program->uploadVec3("aabb_max",mesh->getAABB().max);
     program->uploadInt("volumeTexture",0);
     program->uploadMat4("pvm",pvm);
     program->uploadLight("light",light,view_mat);
     glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+
+
+    historyBuffer[currentHistory]->unbind();
+    glBindBuffer(GL_ARRAY_BUFFER,fullscreenVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,fullscreenIBO);
+    glVertexAttribPointer(0,4,GL_FLOAT,GL_FALSE,sizeof(glm::vec4),(void*)0);
+    colorAttachments[0]->bind(0);
+    colorAttachments[1]->bind(1);
+    colorAttachments[2]->bind(2);
+    colorAttachments[3]->bind(3);
+    colorAttachments[4]->bind(4);
+    colorAttachments[5]->bind(5);
+    colorAttachments[6]->bind(6);
+    colorAttachments[7]->bind(7);
+    blitProgram->bind();
+    blitProgram->uploadVec4("viewport_size",viewport_size);
+    blitProgram->uploadInt("texture_a",(currentHistory)%8);
+    blitProgram->uploadInt("texture_b",(currentHistory+1)%8);
+    blitProgram->uploadInt("texture_c",(currentHistory+2)%8);
+    blitProgram->uploadInt("texture_d",(currentHistory+3)%8);
+    blitProgram->uploadInt("texture_e",(currentHistory+4)%8);
+    blitProgram->uploadInt("texture_f",(currentHistory+5)%8);
+    blitProgram->uploadInt("texture_g",(currentHistory+6)%8);
+    blitProgram->uploadInt("texture_h",(currentHistory+7)%8);
+    glDrawElements(GL_TRIANGLES,6,GL_UNSIGNED_INT,0);
+    currentHistory=(currentHistory+1)%8;
 
     /*particles->bind();
     Vertex::setVertexAttribs();

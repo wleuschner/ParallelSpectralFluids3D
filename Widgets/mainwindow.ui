@@ -137,7 +137,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QDoubleSpinBox" name="spinLifeTime"/>
+           <widget class="QDoubleSpinBox" name="spinLifeTime">
+            <property name="maximum">
+             <double>99.000000000000000</double>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -216,7 +220,7 @@
      <x>0</x>
      <y>0</y>
      <width>882</width>
-     <height>22</height>
+     <height>31</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

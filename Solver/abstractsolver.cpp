@@ -1,22 +1,36 @@
 #include"abstractsolver.h"
 #include<GL/glew.h>
 #include<iostream>
+#include<iomanip>
+#include<chrono>
 
 AbstractSolver::AbstractSolver()
 {
     //maxParticles=1000;
+    maxFramesBenchmark = 1000;
+    isBenchmark = false;
+    benchmarkFrameNo = 0;
     maxParticles=1000000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
-    volumeTexture = NULL;
+    histogramTexture = NULL;
+    volumeTextures[0] = NULL;
+    volumeTextures[1] = NULL;
+
+    for(unsigned int i=0;i<8;i++)
+    {
+        historyBuffer[i] = NULL;
+        colorAttachments[i] = NULL;
+        depthAttachments[i] = NULL;
+    }
     mesh = NULL;
     gravityActive = false;
     resolution = 0.1;
     nEigenFunctions = 96;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
-    lifeTime = 10.0*60.0;
+    lifeTime = 1.0*60.0;
 
     glm::vec4 verts[] = {glm::vec4(-1.0,-1.0,0.0,0.0),glm::vec4(-1.0,1.0,0.0,0.0),glm::vec4(1.0,1.0,0.0,0.0),glm::vec4(1.0,-1.0,0.0,0.0)};
     unsigned int indices[] = {0,1,2,2,0,3};
@@ -31,6 +45,42 @@ AbstractSolver::AbstractSolver()
     particles->reserve(maxParticles);
 }
 
+void AbstractSolver::resize(unsigned int w,unsigned int h)
+{
+    for(unsigned int i=0;i<8;i++)
+    {
+        if(historyBuffer[i]!=NULL)
+        {
+            delete historyBuffer[i];
+        }
+        if(colorAttachments[i]!=NULL)
+        {
+            delete colorAttachments[i];
+        }
+        if(depthAttachments[i]!=NULL)
+        {
+            delete depthAttachments[i];
+        }
+        colorAttachments[i] = new Texture();
+        colorAttachments[i]->bind(0);
+        colorAttachments[i]->createRenderImage(w,h);
+
+        depthAttachments[i] = new Texture();
+        depthAttachments[i]->bind(0);
+        depthAttachments[i]->createDepthImage(w,h);
+
+        historyBuffer[i] = new FrameBufferObject();
+        historyBuffer[i]->bind();
+        historyBuffer[i]->resize(w,h);
+        historyBuffer[i]->attachColorImage(*colorAttachments[i],0);
+        historyBuffer[i]->attachDepthImage(*depthAttachments[i]);
+        if(!historyBuffer[i]->isComplete())
+        {
+            exit(-1);
+        }
+    }
+}
+
 void AbstractSolver::setMesh(Model* mesh)
 {
     clearParticles();
@@ -40,10 +90,20 @@ void AbstractSolver::setMesh(Model* mesh)
     }
     this->mesh = mesh;
     decMesh = mesh->voxelize(resolution);
-    if(volumeTexture!=NULL)
+    if(volumeTextures[0]!=NULL)
     {
-        volumeTexture->destroy();
-        delete volumeTexture;
+        volumeTextures[0]->destroy();
+        delete volumeTextures[0];
+    }
+    if(volumeTextures[1]!=NULL)
+    {
+        volumeTextures[1]->destroy();
+        delete volumeTextures[1];
+    }
+    if(histogramTexture!=NULL)
+    {
+        histogramTexture->destroy();
+        delete histogramTexture;
     }
     if(gridVerts!=NULL)
     {
@@ -60,9 +120,17 @@ void AbstractSolver::setMesh(Model* mesh)
 
     glm::uvec3 dims = decMesh.getDimensions();
 
-    volumeTexture = new Texture3D();
-    volumeTexture->bind(0);
-    volumeTexture->createRenderImage(128,128,128);
+    volumeTextures[0] = new Texture3D();
+    volumeTextures[0]->bind(0);
+    volumeTextures[0]->createFloatRenderImage(256,256,256);
+/*
+    volumeTextures[1] = new Texture3D();
+    volumeTextures[1]->bind(0);
+    volumeTextures[1]->createFloatRenderImage(1024,1024,1024);*/
+
+    histogramTexture = new Texture3D();
+    histogramTexture->bind(0);
+    histogramTexture->createRenderImage(256,256,256);
 
     gridVerts = new VertexBuffer();
     gridIndices = new IndexBuffer();
@@ -89,14 +157,14 @@ void AbstractSolver::setMesh(Model* mesh)
     buildAdvection();
 }
 
-void AbstractSolver::setInitialVelocityField(const Eigen::VectorXd& field)
+void AbstractSolver::setInitialVelocityField(const Eigen::VectorXf& field)
 {
-    basisCoeff = velBasisField.transpose()*field;
+    basisCoeff = velBasisField.transpose()*field.cast<double>();
 }
 
-void AbstractSolver::setInitialVorticityField(const Eigen::VectorXd& field)
+void AbstractSolver::setInitialVorticityField(const Eigen::VectorXf& field)
 {
-    basisCoeff = vortBasisField.transpose()*field;
+    basisCoeff = vortBasisField.transpose()*field.cast<double>();
 }
 
 void AbstractSolver::setNumberEigenFunctions(unsigned int n)
@@ -111,16 +179,37 @@ void AbstractSolver::setNumberEigenFunctions(unsigned int n)
 void AbstractSolver::setResolution(double res)
 {
     clearParticles();
-    if(volumeTexture!=NULL)
+    if(volumeTextures[0]!=NULL)
     {
-        volumeTexture->destroy();
-        delete volumeTexture;
+        volumeTextures[0]->destroy();
+        delete volumeTextures[0];
+    }
+    if(volumeTextures[1]!=NULL)
+    {
+        volumeTextures[1]->destroy();
+        delete volumeTextures[1];
+    }
+    if(histogramTexture!=NULL)
+    {
+        histogramTexture->destroy();
+        delete histogramTexture;
     }
     this->resolution = res;
     decMesh = mesh->voxelize(res);
     glm::uvec3 dims = decMesh.getDimensions();
-    volumeTexture = new Texture3D();
-    volumeTexture->createRenderImage(dims.x*4,dims.y*4,dims.z*4);
+
+    volumeTextures[0] = new Texture3D();
+    volumeTextures[0]->bind(0);
+    volumeTextures[0]->createFloatRenderImage(256,256,256);
+/*
+    volumeTextures[1] = new Texture3D();
+    volumeTextures[1]->bind(0);
+    volumeTextures[1]->createFloatRenderImage(512,512,512);*/
+
+    histogramTexture = new Texture3D();
+    histogramTexture->bind(0);
+    histogramTexture->createRenderImage(256,256,256);
+
     buildLaplace();
     buildEigenFunctions();
     buildAdvection();
@@ -150,6 +239,58 @@ void AbstractSolver::changeNumParticles(unsigned int n)
 void AbstractSolver::setLifeTime(float lt)
 {
     lifeTime = lt*60.0;
+}
+
+void AbstractSolver::startBenchmark(bool benchmark)
+{
+    if(benchmark)
+    {
+        isBenchmark = true;
+        benchmarkSums.resize(2);
+        benchmarkSums[0] = 0.0;
+        benchmarkSums[1] = 0.0;
+        benchmarkFrameNo = 0;
+        if(benchmark_file.is_open())
+        {
+            benchmark_file.close();
+        }
+        benchmark_file.open("benchmark.csv");
+        benchmark_file.setf(std::ios::fixed,std::ios::floatfield);
+        glm::uvec3 dims = decMesh.getDimensions();
+        benchmark_file<<maxParticles<<std::endl;
+        benchmark_file<<nEigenFunctions<<std::endl;
+        benchmark_file<<dims.x<<","<<dims.y<<","<<dims.z<<std::endl;
+        clearParticles();
+        {
+            std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+            buildLaplace();
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            benchmark_file<<std::chrono::duration<double,std::milli>(end-begin).count()<<",";
+        }
+        {
+            std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+            buildEigenFunctions();
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            benchmark_file<<std::chrono::duration<double,std::milli>(end-begin).count()<<",";
+        }
+        {
+            std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+            buildAdvection();
+            std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+            benchmark_file<<std::chrono::duration<double,std::milli>(end-begin).count()<<std::endl<<std::endl;
+        }
+    }
+    else
+    {
+        benchmark_file<<std::endl<<std::endl;
+        benchmark_file<<benchmarkSums[0]/maxFramesBenchmark<<","<<benchmarkSums[1]/maxFramesBenchmark;
+        isBenchmark = false;
+        benchmarkFrameNo = 0;
+        if(benchmark_file.is_open())
+        {
+            benchmark_file.close();
+        }
+    }
 }
 
 Model* AbstractSolver::getMesh()
@@ -192,12 +333,12 @@ const Eigen::VectorXd& AbstractSolver::getBasisCoefficients()
     return basisCoeff;
 }
 
-const Eigen::VectorXd& AbstractSolver::getVelocityField()
+const Eigen::VectorXf& AbstractSolver::getVelocityField()
 {
     return velocityField;
 }
 
-const Eigen::VectorXd& AbstractSolver::getVorticityField()
+const Eigen::VectorXf& AbstractSolver::getVorticityField()
 {
     return vorticityField;
 }
