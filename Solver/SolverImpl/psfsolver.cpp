@@ -134,14 +134,6 @@ void PSFSolver::integrate()
                 unsigned int v4xf5 = decMesh.getXFaceIndex(xOfs,yOfsPlus,zOfsPlus);
                 unsigned int v4xf6 = decMesh.getXFaceIndex(xOfs+1,yOfsPlus,zOfsPlus);
 
-                assert(v1xf5 == decMesh.signedIdToIndex(v1x.f5));
-                assert(v1xf6 == decMesh.signedIdToIndex(v1x.f6));
-                assert(v2xf5 == decMesh.signedIdToIndex(v2x.f5));
-                assert(v2xf6 == decMesh.signedIdToIndex(v2x.f6));
-                assert(v3xf5 == decMesh.signedIdToIndex(v3x.f5));
-                assert(v3xf6 == decMesh.signedIdToIndex(v3x.f6));
-                assert(v4xf5 == decMesh.signedIdToIndex(v4x.f5));
-                assert(v4xf6 == decMesh.signedIdToIndex(v4x.f6));
 
                 unsigned int v1yf3 = decMesh.getYFaceIndex(xOfsMinus,yOfs,zOfsMinus);
                 unsigned int v1yf4 = decMesh.getYFaceIndex(xOfsMinus,yOfs+1,zOfsMinus);
@@ -152,14 +144,6 @@ void PSFSolver::integrate()
                 unsigned int v4yf3 = decMesh.getYFaceIndex(xOfsPlus,yOfs,zOfsPlus);
                 unsigned int v4yf4 = decMesh.getYFaceIndex(xOfsPlus,yOfs+1,zOfsPlus);
 
-                assert(v1yf3 == decMesh.signedIdToIndex(v1y.f3));
-                assert(v1yf4 == decMesh.signedIdToIndex(v1y.f4));
-                assert(v2yf3 == decMesh.signedIdToIndex(v2y.f3));
-                assert(v2yf4 == decMesh.signedIdToIndex(v2y.f4));
-                assert(v3yf3 == decMesh.signedIdToIndex(v3y.f3));
-                assert(v3yf4 == decMesh.signedIdToIndex(v3y.f4));
-                assert(v4yf3 == decMesh.signedIdToIndex(v4y.f3));
-                assert(v4yf4 == decMesh.signedIdToIndex(v4y.f4));
 
                 unsigned int v1zf1 = decMesh.getZFaceIndex(xOfsMinus,yOfsMinus,zOfs);
                 unsigned int v1zf2 = decMesh.getZFaceIndex(xOfsMinus,yOfsMinus,zOfs+1);
@@ -170,14 +154,6 @@ void PSFSolver::integrate()
                 unsigned int v4zf1 = decMesh.getZFaceIndex(xOfsPlus,yOfsPlus,zOfs);
                 unsigned int v4zf2 = decMesh.getZFaceIndex(xOfsPlus,yOfsPlus,zOfs+1);
 
-                assert(v1zf1 == decMesh.signedIdToIndex(v1z.f1));
-                assert(v1zf2 == decMesh.signedIdToIndex(v1z.f2));
-                assert(v2zf1 == decMesh.signedIdToIndex(v2z.f1));
-                assert(v2zf2 == decMesh.signedIdToIndex(v2z.f2));
-                assert(v3zf1 == decMesh.signedIdToIndex(v3z.f1));
-                assert(v3zf2 == decMesh.signedIdToIndex(v3z.f2));
-                assert(v4zf1 == decMesh.signedIdToIndex(v4z.f1));
-                assert(v4zf2 == decMesh.signedIdToIndex(v4z.f2));
 
                 float vel1x,vel2x,vel3x,vel4x,vel5x,vel6x,vel7x,vel8x;
                 vel1x = -decMesh.getFaceSignum(v1xIdx,4)*velocityField((v1xf5));
@@ -215,9 +191,6 @@ void PSFSolver::integrate()
                 glm::vec3 vel;
 
                 particleNormalizedX = float(1.0/resolution)*((glm::vec3(it->position))-glm::vec3(cf1x));
-                assert(particleNormalizedX.x>=0.0);
-                assert(particleNormalizedX.y>=0.0);
-                assert(particleNormalizedX.z>=0.0);
 
 
                 glm::vec4 xVelXInterp = glm::mix(glm::vec4(vel1x,vel3x,vel5x,vel7x),glm::vec4(vel2x,vel4x,vel6x,vel8x),particleNormalizedX.y);
@@ -225,18 +198,12 @@ void PSFSolver::integrate()
                 vel.x = glm::mix(xVelYInterp.x,xVelYInterp.y,particleNormalizedX.z);
 
                 particleNormalizedY = float(1.0/resolution)*(glm::vec3(it->position)-glm::vec3(cf1y));
-                assert(particleNormalizedY.x>=0.0);
-                assert(particleNormalizedY.y>=0.0);
-                assert(particleNormalizedY.z>=0.0);
 
                 glm::vec4 yVelXInterp = glm::mix(glm::vec4(vel1y,vel3y,vel5y,vel7y),glm::vec4(vel2y,vel4y,vel6y,vel8y),particleNormalizedY.y);
                 glm::vec2 yVelYInterp = glm::mix(glm::vec2(yVelXInterp.x,yVelXInterp.z),glm::vec2(yVelXInterp.y,yVelXInterp.w),particleNormalizedY.x);
                 vel.y = glm::mix(yVelYInterp.x,yVelYInterp.y,particleNormalizedY.z);
 
                 particleNormalizedZ = float(1.0/resolution)*(glm::vec3(it->position)-glm::vec3(cf1z));
-                assert(particleNormalizedZ.x>=0.0);
-                assert(particleNormalizedZ.y>=0.0);
-                assert(particleNormalizedZ.z>=0.0);
 
                 glm::vec4 zVelXInterp = glm::mix(glm::vec4(vel1z,vel3z,vel5z,vel7z),glm::vec4(vel2z,vel4z,vel6z,vel8z),particleNormalizedZ.y);
                 glm::vec2 zVelYInterp = glm::mix(glm::vec2(zVelXInterp.x,zVelXInterp.z),glm::vec2(zVelXInterp.y,zVelXInterp.w),particleNormalizedZ.x);

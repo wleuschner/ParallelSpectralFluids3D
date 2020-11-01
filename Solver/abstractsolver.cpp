@@ -86,23 +86,23 @@ void AbstractSolver::setMesh(Model* mesh)
     clearParticles();
     if(this->mesh!=NULL)
     {
-        delete this->mesh;
+        //delete this->mesh;
     }
     this->mesh = mesh;
     decMesh = mesh->voxelize(resolution);
     if(volumeTextures[0]!=NULL)
     {
-        volumeTextures[0]->destroy();
+        //volumeTextures[0]->destroy();
         delete volumeTextures[0];
     }
     if(volumeTextures[1]!=NULL)
     {
-        volumeTextures[1]->destroy();
+        //volumeTextures[1]->destroy();
         delete volumeTextures[1];
     }
     if(histogramTexture!=NULL)
     {
-        histogramTexture->destroy();
+        //histogramTexture->destroy();
         delete histogramTexture;
     }
     if(gridVerts!=NULL)

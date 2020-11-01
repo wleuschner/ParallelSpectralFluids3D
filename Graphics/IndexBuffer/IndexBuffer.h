@@ -6,6 +6,7 @@ class IndexBuffer
 {
 public:
     IndexBuffer();
+    ~IndexBuffer();
     void bind();
     void upload(const std::vector<unsigned int>& indices);
 private:

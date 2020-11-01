@@ -6,6 +6,11 @@ IndexBuffer::IndexBuffer()
     glGenBuffers(1,&id);
 }
 
+IndexBuffer::~IndexBuffer()
+{
+    glDeleteBuffers(1,&id);
+}
+
 void IndexBuffer::bind()
 {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,id);

@@ -10,6 +10,7 @@ class ShaderProgram
 {
 public:
     ShaderProgram();
+    ~ShaderProgram();
     void attachShader(const Shader& shader);
     void bind();
     bool link();

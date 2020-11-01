@@ -7,6 +7,7 @@ class VertexBuffer
 {
 public:
     VertexBuffer();
+    ~VertexBuffer();
     void bind();
     void bindBufferBase(unsigned int id);
     void reserve(uint32_t num_verts);

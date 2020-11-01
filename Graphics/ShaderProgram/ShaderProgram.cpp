@@ -7,6 +7,12 @@ ShaderProgram::ShaderProgram()
     id = glCreateProgram();
 }
 
+ShaderProgram::~ShaderProgram()
+{
+    glDeleteProgram(id);
+}
+
+
 void ShaderProgram::attachShader(const Shader &shader)
 {
     glAttachShader(id,shader.id);

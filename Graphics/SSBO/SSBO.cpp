@@ -6,6 +6,11 @@ SSBO::SSBO()
     glGenBuffers(1,&id);
 }
 
+SSBO::~SSBO()
+{
+    glDeleteBuffers(1,&id);
+}
+
 void SSBO::clearSSBO()
 {
     int clearValue = 0;

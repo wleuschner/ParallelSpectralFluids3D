@@ -5,6 +5,7 @@ class SSBO
 {
 public:
     SSBO();
+    ~SSBO();
     void clearSSBO();
     void bind(unsigned int id);
     void reserve(unsigned int num_verts);
