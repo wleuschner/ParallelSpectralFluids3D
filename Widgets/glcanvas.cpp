@@ -311,15 +311,22 @@ void GLCanvas::paintGL()
             glDisable(GL_CULL_FACE);
             glDisable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
-            glBlendFunc(GL_ONE_MINUS_SRC_ALPHA,GL_SRC_ALPHA);
 
             Particle::setVertexAttribs();
             Particle::enableVertexAttribs();
 
             solver->view_mat = camera.getView();
             solver->camera_position = camera.getPosition();
-            solver->drawParticles(volumeProgram,pvm);
-            //solver->drawParticles(pointsProgram,pvm);
+            if(solver->gpu)
+            {
+                glBlendFunc(GL_ONE_MINUS_SRC_ALPHA,GL_SRC_ALPHA);
+                solver->drawParticles(volumeProgram,pvm);
+            }
+            else
+            {
+                glBlendFunc(GL_ONE,GL_ONE);
+                solver->drawParticles(pointsProgram,pvm);
+            }
             glDisable(GL_BLEND);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
@@ -363,8 +370,17 @@ void GLCanvas::paintGL()
 
 void GLCanvas::resizeGL(int w, int h)
 {
-    psfSolverGPU->viewport_size = glm::vec4(0.0,0.0,w,h);
-    psfSolverGPU->resize(w,h);
+    if(solver->gpu)
+    {
+        psfSolverGPU->viewport_size = glm::vec4(0.0,0.0,w,h);
+        psfSolverGPU->resize(w,h,true);
+    }
+    else
+    {
+        psfSolver->viewport_size = glm::vec4(0.0,0.0,w,h);
+        psfSolver->resize(w,h,false);
+    }
+
     projection = glm::perspectiveFovRH(45.0f,(float)w,(float)h,0.1f,100.0f);
 }
 

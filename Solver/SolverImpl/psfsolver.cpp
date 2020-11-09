@@ -14,6 +14,8 @@
 
 PSFSolver::PSFSolver() : AbstractSolver()
 {
+    gpu=false;
+    simTime = 0.0f;
 }
 
 void PSFSolver::integrate()
@@ -73,7 +75,7 @@ void PSFSolver::integrate()
         #pragma omp parallel for
         for(std::vector<Particle>::iterator it=parts.begin();it<parts.end();it++)
         {
-            if(simTime<it->position.w)
+            if(it->position.w>0.0f)
             {
                 int yOfs = static_cast<int>((mesh->getAABB().min.y+mesh->getAABB().getExtent().y+it->position.y)/resolution);
                 int xOfs = static_cast<int>((mesh->getAABB().min.x+mesh->getAABB().getExtent().x+it->position.x)/resolution);
@@ -210,11 +212,14 @@ void PSFSolver::integrate()
                 vel.z = glm::mix(zVelYInterp.x,zVelYInterp.y,particleNormalizedZ.z);
 
                 //it->position = (it->position)+timeStep*vel;
-                it->position = glm::vec4(glm::clamp(glm::vec3(it->position)+float(timeStep)*vel,glm::vec3(mesh->getAABB().min),glm::vec3(mesh->getAABB().max)),it->position.w);
+                it->position = glm::vec4(glm::clamp(glm::vec3(it->position)+float(timeStep)*vel,glm::vec3(mesh->getAABB().min),glm::vec3(mesh->getAABB().max)),it->position.w-1.0f);
             }
             else
             {
-                it->position.w = 0.0;
+                it->position.x = ((rand()%1024)/1024.0-0.5)*0.25;
+                it->position.y = mesh->getAABB().min.y+0.2f;
+                it->position.z = -glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.25;
+                it->position.w = lifeTime*((rand()%1024)/1024.0);
             }
         }
         std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
@@ -225,7 +230,7 @@ void PSFSolver::integrate()
             benchmark_file<<t<<std::endl;
         }
     }
-    simTime+=1.0/60.0;
+    simTime+=1.0;
 }
 
 void PSFSolver::buildLaplace()
@@ -388,7 +393,7 @@ void PSFSolver::buildLaplace()
 
         }
     }
-    setInitialVorticityField(vorticityField);
+    //setInitialVorticityField(vorticityField);
 
     velocityField = Eigen::VectorXf::Zero(decMesh.getNumFaces());
     glm::uvec3 dims = decMesh.getDimensions();
@@ -406,9 +411,9 @@ void PSFSolver::buildLaplace()
             }
         }
     }
-    //setInitialVelocityField(velocityField);
+    setInitialVelocityField(velocityField);
 
-    for(unsigned int i=0;i<400000;i++)
+    for(unsigned int i=0;i<particles->getNumParticles();i++)
     {
         glm::dvec3 pos = glm::dvec3(mesh->getAABB().getCenter());
         //pos.y= mesh->getAABB().min.y+0.2f;
@@ -419,7 +424,7 @@ void PSFSolver::buildLaplace()
         //pos.x+=((rand()%1024)/1024.0-0.5)*0.5;
         pos.z=-glm::dvec3(mesh->getAABB().getCenter()).z+((rand()%1024)/1024.0-0.5)*0.25;
         //pos = glm::dvec3(0.0);
-        addParticle(Particle(30*60,pos));
+        addParticle(Particle(lifeTime*((rand()%1024)/1024.0),pos));
     }
 }
 
@@ -535,7 +540,7 @@ void PSFSolver::buildAdvection()
     {
         for(unsigned int j=0;j<nEigenFunctions;j++)
         {
-            advection[i].col(j) = 1.0/eigenValues(i)*wedges[i].col(j);
+            advection[i].col(j) = (1.0/eigenValues(i))*wedges[i].col(j);
         }
     }
 
@@ -553,5 +558,6 @@ void PSFSolver::drawParticles(ShaderProgram* program,const glm::mat4& pvm)
     program->bind();
     program->uploadMat4("pvm",pvm);
     program->uploadVec4("color",glm::vec4(0.0,0.1,0.0,1.0));
+    program->uploadScalar("lifeTime",lifeTime);
     glDrawArrays(GL_POINTS,0,particles->getNumParticles());
 }

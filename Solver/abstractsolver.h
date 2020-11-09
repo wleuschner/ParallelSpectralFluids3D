@@ -21,7 +21,7 @@ public:
     void setInitialVelocityField(const Eigen::VectorXf& field);
     void setInitialVorticityField(const Eigen::VectorXf& field);
 
-    void resize(unsigned int w,unsigned int h);
+    void resize(unsigned int w,unsigned int h, bool gpu);
     void setNumberEigenFunctions(unsigned int n);
     void changeNumParticles(unsigned int n);
     void setResolution(double res);
@@ -60,6 +60,8 @@ public:
     glm::vec4 viewport_size;
     glm::vec3 camera_position;
     glm::mat4 view_mat;
+
+    bool gpu;
 
 protected:
     unsigned int maxFramesBenchmark;

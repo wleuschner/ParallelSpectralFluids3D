@@ -10,7 +10,7 @@ AbstractSolver::AbstractSolver()
     maxFramesBenchmark = 1000;
     isBenchmark = false;
     benchmarkFrameNo = 0;
-    maxParticles=1000000;
+    maxParticles=1000;
     gridVerts = NULL;
     gridIndices = NULL;
     velocityVerts = NULL;
@@ -27,7 +27,7 @@ AbstractSolver::AbstractSolver()
     mesh = NULL;
     gravityActive = false;
     resolution = 0.1;
-    nEigenFunctions = 96;
+    nEigenFunctions = 16;
     viscosity = 0.0f;
     timeStep = 1.0f/60.0f;
     lifeTime = 1.0*60.0;
@@ -45,39 +45,47 @@ AbstractSolver::AbstractSolver()
     particles->reserve(maxParticles);
 }
 
-void AbstractSolver::resize(unsigned int w,unsigned int h)
+void AbstractSolver::resize(unsigned int w,unsigned int h, bool gpu)
 {
-    for(unsigned int i=0;i<8;i++)
+    if(gpu)
     {
-        if(historyBuffer[i]!=NULL)
+        for(unsigned int i=0;i<8;i++)
         {
-            delete historyBuffer[i];
-        }
-        if(colorAttachments[i]!=NULL)
-        {
-            delete colorAttachments[i];
-        }
-        if(depthAttachments[i]!=NULL)
-        {
-            delete depthAttachments[i];
-        }
-        colorAttachments[i] = new Texture();
-        colorAttachments[i]->bind(0);
-        colorAttachments[i]->createRenderImage(w,h);
+            if(historyBuffer[i]!=NULL)
+            {
+                delete historyBuffer[i];
+            }
+            if(colorAttachments[i]!=NULL)
+            {
+                delete colorAttachments[i];
+            }
+            if(depthAttachments[i]!=NULL)
+            {
+                delete depthAttachments[i];
+            }
+            colorAttachments[i] = new Texture();
+            colorAttachments[i]->bind(0);
+            colorAttachments[i]->createRenderImage(w,h);
 
-        depthAttachments[i] = new Texture();
-        depthAttachments[i]->bind(0);
-        depthAttachments[i]->createDepthImage(w,h);
+            depthAttachments[i] = new Texture();
+            depthAttachments[i]->bind(0);
+            depthAttachments[i]->createDepthImage(w,h);
 
-        historyBuffer[i] = new FrameBufferObject();
-        historyBuffer[i]->bind();
-        historyBuffer[i]->resize(w,h);
-        historyBuffer[i]->attachColorImage(*colorAttachments[i],0);
-        historyBuffer[i]->attachDepthImage(*depthAttachments[i]);
-        if(!historyBuffer[i]->isComplete())
-        {
-            exit(-1);
+            historyBuffer[i] = new FrameBufferObject();
+            historyBuffer[i]->bind();
+            historyBuffer[i]->resize(w,h);
+            historyBuffer[i]->attachColorImage(*colorAttachments[i],0);
+            historyBuffer[i]->attachDepthImage(*depthAttachments[i]);
+            if(!historyBuffer[i]->isComplete())
+            {
+                exit(-1);
+            }
         }
+    }
+    else
+    {
+        glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,0,0);
+        glFramebufferTexture(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,0,0);
     }
 }
 

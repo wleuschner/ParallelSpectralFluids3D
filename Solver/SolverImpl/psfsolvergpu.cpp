@@ -23,6 +23,7 @@
 
 PSFSolverGPU::PSFSolverGPU(cl_context context,cl_device_id device,cl_command_queue queue) : AbstractSolver()
 {
+    gpu=true;
     cl_context_id = context;
     cl_queue = queue;
     device_id = device;
