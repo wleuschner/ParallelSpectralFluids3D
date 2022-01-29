@@ -1,6 +1,7 @@
 # ParallelSpectralFluids3D
 
-Implementation of a geometric fluid simulator in Eigenspace for my Masters thesis.
+Implementation of a geometric fluid simulator in Eigenspace for my Masters thesis. The advection step of the simulation was parallelized using OpenCL and the GPU
+
 Thesis can be found at https://drive.google.com/file/d/1-iF5EibfW4GTdbNsIavVh5I0ybkZr20h/view
 
 Videos showing the implementation in action can be found here:
